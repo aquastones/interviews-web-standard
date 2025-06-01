@@ -1,7 +1,11 @@
+using api.Data;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.AddDbContext<ProgramDbContext>(Options => Options.UseSqlite("Data Source=tasks.db"));
 
 var app = builder.Build();
 

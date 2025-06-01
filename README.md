@@ -1,4 +1,44 @@
-# Web Development Interview Test
+# SOLUTION DOCUMENTATION
+1. Clone the repo
+2. Run the backend in /api:
+```cmd
+dotnet run
+```
+3. Run the frontend in /client:
+```cmd
+npm run
+```
+
+## HTTP ROUTES:
+---
+
+### **TasksController** (`[Route("api/tasks")]`)
+
+| Method | Route                  | Description                |
+| ------ | ---------------------- | -------------------------- |
+| GET    | `/api/tasks`           | Get all tasks              |
+| GET    | `/api/tasks/{id}`      | Get a specific task by ID  |
+| POST   | `/api/tasks`           | Create a new task          |
+| PUT    | `/api/tasks/{id}`      | Update an existing task    |
+| DELETE | `/api/tasks/{id}`      | Delete a task              |
+| POST   | `/api/tasks/{id}/tags` | Associate tags with a task |
+
+---
+
+### **TagsController** (`[Route("api/tags")]`)
+
+| Method | Route                  | Description                         |
+| ------ | ---------------------- | ----------------------------------- |
+| GET    | `/api/tags`            | Get all tags                        |
+| GET    | `/api/tags/{id}`       | Get a specific tag by ID            |
+| POST   | `/api/tags`            | Create a new tag                    |
+| PUT    | `/api/tags/{id}`       | Update a tag                        |
+| DELETE | `/api/tags/{id}`       | Delete a tag                        |
+| GET    | `/api/tags/{id}/tasks` | Get all tasks associated with a tag |
+
+---
+
+# (Task) Web Development Interview Test
 
 ## Introduction
 Welcome to the web development interview test! This task is designed to assess your skills in both backend and frontend development. You will create a simple task application with an API and a client frontend. Follow the instructions carefully and make sure to demonstrate best practices in coding, structure, and git usage.
@@ -16,7 +56,7 @@ You are required to implement the following within these folders.
 1. **Technology**: Use [ASP.NET](https://dotnet.microsoft.com/en-us/apps/aspnet/apis) in .NET 8 written in C#.
 2. **Database**: Use SQLite for the database.
 3. **ORM**: Use [Entity Framework](https://learn.microsoft.com/en-us/ef/core/) Core as the ORM.
-4. **Functionality**: 
+4. **Functionality**:
     - Create a `Task` model representing a single task.
     - Additionally, create a `Tag` model to represent tags that can be associated with tasks.
     - Implement a many-to-many relationship between `Task` and `Tag` using a join table.
@@ -50,7 +90,7 @@ You are required to implement the following within these folders.
 2. **Branching**: Use a feature-branch workflow. Create branches for different functionalities (e.g., `feature/api-setup`, `feature/client-setup`).
 3. **Commits**: Make frequent, clear, and descriptive commits.
 4. **Pull Requests**: Once you've completed a feature, create a pull request to merge it into your main branch. Include descriptive messages with your pull requests.
-5. **Git Ignore**: Make sure only the necessary files are saved to the repository. Make proper use of gitignore. 
+5. **Git Ignore**: Make sure only the necessary files are saved to the repository. Make proper use of gitignore.
 
 ## Additional Requirements
 - **Documentation**: Add comments to your code where necessary and provide a brief documentation on how to set up and run the project.
