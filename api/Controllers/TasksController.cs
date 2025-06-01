@@ -6,7 +6,7 @@ using api.Dtos;
 namespace api.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [Route("api/tasks")]
     public class TasksController : ControllerBase
     {
         // Map to context
