@@ -1,8 +1,8 @@
-﻿using api.Data;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using api.Data;
 using api.Dtos;
 using api.Models;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace api.Controllers
 {
@@ -21,7 +21,8 @@ namespace api.Controllers
         private TagDto MapToDto(Tag tag) => new TagDto
         {
             Id = tag.Id,
-            Name = tag.Name
+            Name = tag.Name,
+            Color = tag.Color
         };
 
         // CREATE TAG
@@ -33,31 +34,6 @@ namespace api.Controllers
 
             var dto = MapToDto(tag);
             return CreatedAtAction(nameof(GetTagById), new { id = tag.Id }, dto);
-        }
-
-        // ASSIGN TAG TO TASK
-        [HttpPost("/api/tasks/{taskId}/tags")]
-        public async Task<IActionResult> AddTagsToTask(int taskId, [FromBody] List<int> tagIds)
-        {
-            var task = await _context.Tasks
-                .Include(t => t.TaskTags)
-                .FirstOrDefaultAsync(t => t.Id == taskId);
-
-            if (task == null)
-            {
-                return NotFound(); // return error 404
-            }
-
-            foreach (var tagId in tagIds)
-            {
-                if (!task.TaskTags.Any(tt => tt.TagId == tagId))
-                {
-                    task.TaskTags.Add(new TaskTag { TaskId = taskId, TagId = tagId });
-                }
-            }
-
-            await _context.SaveChangesAsync();
-            return Ok();
         }
 
         // READ ALL TAGS
@@ -123,6 +99,7 @@ namespace api.Controllers
             }
 
             existingTag.Name = tag.Name;
+            existingTag.Color = tag.Color;
 
             await _context.SaveChangesAsync();
             return NoContent(); // return 204

@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using api.Data;
 using api.Dtos;
+using api.Models;
 
 namespace api.Controllers
 {
@@ -22,6 +23,8 @@ namespace api.Controllers
             Id = task.Id,
             Name = task.Name,
             Description = task.Description,
+            Done = task.Done,
+            DateCreated = task.DateCreated.ToString("dd/MM/yyyy"), // Date formatting
             Tags = task.TaskTags.Select(tt => new TagDto
             {
                 Id = tt.Tag.Id,
@@ -122,6 +125,101 @@ namespace api.Controllers
             await _context.SaveChangesAsync();
 
             return NoContent(); // return 204 when deleted
+        }
+
+        // MARK AS DONE/UNDONE
+        [HttpPatch("{id}/done")]
+        public async Task<IActionResult> ToggleTaskDone(int id)
+        {
+            var task = await _context.Tasks.FindAsync(id);
+
+            if (task == null)
+            {
+                return NotFound(); // return error 404
+            }
+
+            task.Done = !task.Done;
+            await _context.SaveChangesAsync();
+
+            return Ok(new {task.Id, task.Done});
+        }
+
+        // ASSIGN TAG TO TASK
+        [HttpPost("{id}/tags-single")]
+        public async Task<IActionResult> AddTagsToTask(int id, [FromBody] List<int> tagIds)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.TaskTags)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+            {
+                return NotFound(); // return error 404
+            }
+
+            // Remove existing TaskTag relationships
+            task.TaskTags.Clear();
+
+            // Add new TaskTag relationships
+            foreach (var tagId in tagIds.Distinct())
+            {
+                task.TaskTags.Add(new TaskTag { TaskId = id, TagId = tagId });
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { TaskId = id, TagIds = tagIds }); // for tags-one
+        }
+
+        // ASSIGN MULTIPLE TAGS TO TASK AT ONCE
+        [HttpPost("{id}/tags-multiple")]
+        public async Task<IActionResult> AddTagsFromString(int id, [FromBody] string tagString)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.TaskTags)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+            {
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(tagString))
+            {
+                return BadRequest("Tag string cannot be empty.");
+            }
+
+            var tagNames = tagString
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var existingTags = await _context.Tags
+                .Where(t => tagNames.Contains(t.Name))
+                .ToListAsync();
+
+            var existingTagNames = existingTags.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Create new tags for ones that don't exist
+            var newTags = tagNames
+                .Where(name => !existingTagNames.Contains(name))
+                .Select(name => new Tag { Name = name })
+                .ToList();
+
+            _context.Tags.AddRange(newTags);
+            await _context.SaveChangesAsync(); // Save new tags to get their IDs
+
+            var allTags = existingTags.Concat(newTags).ToList();
+
+            // Clear old tags and reassign
+            task.TaskTags.Clear();
+            foreach (var tag in allTags)
+            {
+                task.TaskTags.Add(new TaskTag { TaskId = id, TagId = tag.Id });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { TaskId = id, Tags = allTags.Select(t => t.Name).ToList() });
         }
     }
 }
