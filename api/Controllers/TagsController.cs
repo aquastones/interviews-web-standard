@@ -12,9 +12,12 @@ namespace api.Controllers
     {
         // Map to context
         private readonly ProgramDbContext _context;
-        public TagsController(ProgramDbContext context)
+        private readonly ILogger<TagsController> _logger;
+
+        public TagsController(ProgramDbContext context, ILogger<TagsController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // Helper to map Tag -> Dto
@@ -30,7 +33,15 @@ namespace api.Controllers
         public async Task<ActionResult<TagDto>> CreateTag([FromBody] Tag tag)
         {
             _context.Tags.Add(tag);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to add tags to task.");
+                return StatusCode(500, "An error occurred while adding tags to a task.");
+            }
 
             var dto = MapToDto(tag);
             return CreatedAtAction(nameof(GetTagById), new { id = tag.Id }, dto);
@@ -49,7 +60,14 @@ namespace api.Controllers
         public async Task<ActionResult<TagDto>> GetTagById(int id)
         {
             var tag = await _context.Tags.FindAsync(id);
-            return tag == null ? NotFound() : Ok(MapToDto(tag));
+
+            if (tag == null)
+            {
+                _logger.LogWarning("Tag with ID {Id} not found.", id);
+                return NotFound(); // return error 404
+            }
+
+            return Ok(MapToDto(tag)); // return 200
         }
 
         // GET TASKS FOR A TAG
@@ -65,6 +83,7 @@ namespace api.Controllers
 
             if (tag == null)
             {
+                _logger.LogWarning("Tag with ID {Id} not found.", id);
                 return NotFound(); // return error 404
             }
 
@@ -95,14 +114,24 @@ namespace api.Controllers
             var existingTag = await _context.Tags.FindAsync(id);
             if (existingTag == null)
             {
+                _logger.LogWarning("Tag with ID {Id} not found.", id);
                 return NotFound(); // return error 404
             }
 
             existingTag.Name = tag.Name;
             existingTag.Color = tag.Color;
 
-            await _context.SaveChangesAsync();
-            return NoContent(); // return 204
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update tag.");
+                return StatusCode(500, "An error occurred while updating a tag.");
+            }
+
+            return NoContent(); // return 204 when updated
         }
 
 
@@ -114,11 +143,20 @@ namespace api.Controllers
 
             if (tag == null)
             {
+                _logger.LogWarning("Tag with ID {Id} not found.", id);
                 return NotFound(); // return error 404
             }
 
             _context.Tags.Remove(tag);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete tag.");
+                return StatusCode(500, "An error occurred while deleting a tag.");
+            }
 
             return NoContent(); // return 204
         }
