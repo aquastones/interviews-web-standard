@@ -1,152 +1,50 @@
-<template>
-  <div class="min-h-screen bg-gray-900 text-white font-mono p-8">
-    <!-- Page Title -->
-    <h1 class="text-5xl font-bold mb-8 text-center">Task List</h1>
-
-    <!-- Task Creation Form -->
-    <div class="mb-12 max-w-2xl mx-auto bg-gray-800 p-6 rounded-lg ">
-      <h2 class="text-2xl font-bold mb-4">Create New Task</h2>
-
-      <input v-model="name" type="text" placeholder="Name" class="w-full p-3 rounded bg-gray-700 text-white mb-4" />
-      <textarea v-model="description" placeholder="Description"
-        class="w-full p-3 rounded bg-gray-700 text-white mb-4"></textarea>
-      <input v-model="newTagInput" @keydown.enter.prevent="addTag" type="text" placeholder="Add tags (press Enter)"
-        class="w-full p-3 rounded bg-gray-700 text-white mb-4" />
-
-      <div class="flex flex-wrap gap-2 mb-4">
-        <span v-for="(tag, index) in newTags" :key="index"
-          class="bg-sky-600 hover:bg-sky-300 px-3 py-1 rounded-full text-sm text-white transition-colors duration-300">
-          {{ tag }}
-          <button @click="removeTag(index)" class="ml-2 text-red-200 hover:text-red-400">x</button>
-        </span>
-      </div>
-
-      <button @click="createTask"
-        class="bg-sky-600 hover:bg-sky-300 text-white px-6 py-3 rounded-xl transition-colors duration-300">
-        Create Task
-      </button>
-    </div>
-
-    <!-- Task List -->
-    <div v-if="pending" class="text-center text-gray-400">Loading tasks...</div>
-    <div v-else-if="error" class="text-center text-3xl text-red-500">Failed to load tasks.</div>
-    <div v-else>
-      <ul class="space-y-6 max-w-4xl mx-auto">
-        <li v-for="task in tasks" :key="task.id" class="bg-gray-800 p-6 rounded-lg transition relative">
-          <!-- Right-aligned Control Buttons -->
-          <div class="absolute top-4 right-4 flex flex-col items-end space-y-2">
-            <button @click="deleteTask(task.id)"
-              class="bg-red-600 hover:bg-red-400 text-white text-sm px-3 py-1 rounded-xl transition-colors duration-300">
-              Delete
-            </button>
-            <button @click="startEdit(task)"
-              class="bg-yellow-500 hover:bg-yellow-400 text-white text-sm px-3 py-1 rounded-xl transition-colors duration-300">
-              Edit
-            </button>
-          </div>
-
-          <!-- Mark as Done Button -->
-          <div class="flex justify-start items-center mb-4">
-            <button @click="toggleDone(task.id)"
-              class="bg-green-600 hover:bg-green-400 text-white text-sm px-4 py-1 rounded-xl transition-colors duration-300">
-              {{ doneTasks.has(task.id) ? 'Undo' : 'Done' }}
-            </button>
-          </div>
-
-          <!-- Task Edit Form -->
-          <div v-if="editingTaskId === task.id" class="mt-4 space-y-3">
-            <input v-model="editName" class="w-full p-3 bg-gray-700 text-white rounded" />
-            <textarea v-model="editDescription" class="w-full p-3 bg-gray-700 text-white rounded" />
-            <input v-model="newTagInput"
-              @keydown.enter.prevent="() => { if (newTagInput.trim()) { editTags.push(newTagInput.trim()); newTagInput = ''; } }"
-              placeholder="Add tags" class="w-full p-3 bg-gray-700 text-white rounded" />
-            <div class="flex flex-wrap gap-2">
-              <span v-for="(tag, index) in editTags" :key="index"
-                class="bg-sky-600 hover:bg-sky-300 text-white px-3 py-1 rounded-full text-sm transition-colors duration-300">
-                {{ tag }}
-                <button @click="editTags.splice(index, 1)" class="ml-2 text-red-200 hover:text-red-400">x</button>
-              </span>
-            </div>
-            <div class="flex gap-3">
-              <button @click="saveTask"
-                class="bg-sky-600 hover:bg-sky-300 text-white px-4 py-2 rounded-xl transition-colors duration-300">
-                Save
-              </button>
-              <button @click="cancelEdit"
-                class="bg-red-600 hover:bg-red-300 text-white px-4 py-2 rounded-xl transition-colors duration-300">
-                Cancel
-              </button>
-            </div>
-          </div>
-
-          <!-- Task Content -->
-          <h2 :class="['text-3xl font-semibold mb-2', { 'line-through text-gray-500': doneTasks.has(task.id) }]">
-            {{ task.name }}
-          </h2>
-          <p :class="{ 'line-through text-gray-500': doneTasks.has(task.id) }">
-            {{ task.description || 'No description' }}
-          </p>
-
-          <!-- Tags -->
-          <div v-if="task.tags?.length" class="mt-4">
-            <ul class="flex flex-wrap gap-2 mt-1">
-              <li v-for="tag in task.tags" :key="tag.id"
-                class="bg-sky-600 hover:bg-sky-300 text-white px-3 py-1 rounded-full text-sm transition-colors duration-300">
-                {{ tag.name }}
-              </li>
-            </ul>
-          </div>
-        </li>
-      </ul>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref } from 'vue';
 
 // ----------------------------
-// Interfaces for typed data
+// Interfaces
 // ----------------------------
 interface Task {
   id: number;
   name: string;
   description?: string;
-  tags?: Tag[]; // changed from taskTags
+  done: boolean;
+  dateCreated: string;
+  tags: Tag[];
 }
 
 interface Tag {
   id: number;
   name: string;
+  color: string;
 }
 
 // ----------------------------
-// Reactive state
+// State
 // ----------------------------
 const name = ref('');
 const description = ref('');
 const newTagInput = ref('');
-const newTags = ref<string[]>([]); // Tags input for task creation
+const newTags = ref<string[]>([]);
 
-const doneTasks = ref<Set<number>>(new Set()); // Track completed task IDs
-
-// Editing form state
 const editingTaskId = ref<number | null>(null);
 const editName = ref('');
 const editDescription = ref('');
-const editTags = ref<string[]>([]); // Tags input for editing tasks
+const editTags = ref<string[]>([]);
 
 // ----------------------------
-// Task completion toggling
+// Data fetching (Nuxt 3+)
 // ----------------------------
-const toggleDone = (id: number) => {
-  doneTasks.value.has(id)
-    ? doneTasks.value.delete(id)
-    : doneTasks.value.add(id);
-};
+const { data: tasks, pending, error, refresh } = await useAsyncData<Task[]>('tasks', () =>
+  $fetch('/api/tasks')
+);
+
+const { data: tags } = await useAsyncData<Tag[]>('tags', () =>
+  $fetch('/api/tags')
+);
 
 // ----------------------------
-// New tag entry management
+// Tag management
 // ----------------------------
 const addTag = () => {
   const tag = newTagInput.value.trim();
@@ -161,16 +59,48 @@ const removeTag = (index: number) => {
 };
 
 // ----------------------------
-// Start editing a task
+// Create task
+// ----------------------------
+const createTask = async () => {
+  if (!name.value.trim()) return alert('Name is required.');
+
+  try {
+    const newTask = await $fetch<Task>('/api/tasks', {
+      method: 'POST',
+      body: {
+        name: name.value,
+        description: description.value,
+      },
+    });
+
+    await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, {
+      method: 'POST',
+      body: {
+        tagString: newTags.value.join(' ')
+      }
+    });
+
+    name.value = '';
+    description.value = '';
+    newTags.value = [];
+
+    await refresh();
+  } catch (err) {
+    console.error('Failed to create task:', err);
+    alert('Error creating task.');
+  }
+};
+
+// ----------------------------
+// Edit task
 // ----------------------------
 const startEdit = (task: Task) => {
   editingTaskId.value = task.id;
   editName.value = task.name;
   editDescription.value = task.description || '';
-  editTags.value = task.tags?.map(tag => tag.name) || [];
+  editTags.value = task.tags.map(tag => tag.name);
 };
 
-// Cancel edit and reset form
 const cancelEdit = () => {
   editingTaskId.value = null;
   editName.value = '';
@@ -178,14 +108,10 @@ const cancelEdit = () => {
   editTags.value = [];
 };
 
-// ----------------------------
-// Save updated task + tags
-// ----------------------------
 const saveTask = async () => {
   if (!editingTaskId.value) return;
 
   try {
-    // Update task fields
     await $fetch(`/api/tasks/${editingTaskId.value}`, {
       method: 'PUT',
       body: {
@@ -195,32 +121,15 @@ const saveTask = async () => {
       },
     });
 
-    // Create tags if needed and collect IDs
-    const tagIds: number[] = [];
-    for (const tagName of editTags.value) {
-      const tag = await $fetch<Tag>('/api/tags', {
-        method: 'POST',
-        body: { name: tagName },
-      });
-      tagIds.push(tag.id);
-    }
-
-    // Clear all existing tags by overwriting with an empty array
-    await $fetch(`/api/tasks/${editingTaskId.value}/tags`, {
+    await $fetch(`/api/tasks/${editingTaskId.value}/tags-multiple`, {
       method: 'POST',
-      body: [],
+      body: {
+        tagString: editTags.value.join(' ')
+      }
     });
 
-    // Re-add updated tag IDs
-    if (tagIds.length) {
-      await $fetch(`/api/tasks/${editingTaskId.value}/tags`, {
-        method: 'POST',
-        body: tagIds,
-      });
-    }
-
-    await refresh(); // Refresh task list
-    cancelEdit(); // Exit edit mode
+    await refresh();
+    cancelEdit();
   } catch (err) {
     console.error('Update failed:', err);
     alert('Could not update task.');
@@ -228,69 +137,118 @@ const saveTask = async () => {
 };
 
 // ----------------------------
-// Fetch tasks and tags on load
-// ----------------------------
-const { data: tasks, pending, error, refresh } = await useFetch<Task[]>('/api/tasks');
-const { data: tags } = await useFetch<Tag[]>('/api/tags');
-
-// ----------------------------
-// Create new task with tags
-// ----------------------------
-const createTask = async () => {
-  if (!name.value.trim()) return alert('Name is required.');
-
-  try {
-    // Create base task
-    const newTask = await $fetch<Task>('/api/tasks', {
-      method: 'POST',
-      body: {
-        name: name.value,
-        description: description.value,
-      },
-    });
-
-    // Create or reuse each tag
-    const tagIds: number[] = [];
-    for (const tagName of newTags.value) {
-      const tag = await $fetch<Tag>('/api/tags', {
-        method: 'POST',
-        body: { name: tagName },
-      });
-      tagIds.push(tag.id);
-    }
-
-    // Link tags to task
-    if (tagIds.length) {
-      await $fetch(`/api/tasks/${newTask.id}/tags`, {
-        method: 'POST',
-        body: tagIds,
-      });
-    }
-
-    // Reset form
-    name.value = '';
-    description.value = '';
-    newTags.value = [];
-
-    await refresh(); // Refresh list
-  } catch (err) {
-    console.error('Failed to create task:', err);
-    alert('Error creating task');
-  }
-};
-
-// ----------------------------
-// Delete a task by ID
+// Delete task
 // ----------------------------
 const deleteTask = async (id: number) => {
   try {
     await $fetch(`/api/tasks/${id}`, {
       method: 'DELETE',
     });
-    await refresh(); // Update task list
+    await refresh();
   } catch (err) {
     console.error('Delete failed:', err);
     alert('Could not delete task.');
   }
 };
+
+// ----------------------------
+// Toggle task done status
+// ----------------------------
+const toggleDone = async (id: number) => {
+  try {
+    await $fetch(`/api/tasks/${id}/done`, {
+      method: 'PATCH',
+    });
+    await refresh();
+  } catch (err) {
+    console.error('Failed to toggle task:', err);
+    alert('Error marking task as done.');
+  }
+};
 </script>
+
+<template>
+  <div class="min-h-screen bg-gray-900 text-gray-100 font-mono px-4 py-8">
+    <div class="max-w-2xl mx-auto space-y-8">
+
+      <!-- Header -->
+      <h1 class="text-3xl font-bold text-center">Task Manager</h1>
+
+      <!-- Create Task Form -->
+      <div class="space-y-4 border border-gray-700 rounded-lg p-4">
+        <h2 class="text-xl font-semibold">Create Task</h2>
+        <input v-model="name" type="text" placeholder="Task name"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600" />
+        <textarea v-model="description" placeholder="Description (optional)"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600"></textarea>
+
+        <!-- Tag input -->
+        <div class="flex gap-2 items-center">
+          <input v-model="newTagInput" @keydown.enter.prevent="addTag" type="text" placeholder="Add tag"
+            class="flex-1 bg-gray-800 border border-gray-700 p-2 rounded" />
+          <button @click="addTag" class="px-3 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">Add</button>
+        </div>
+
+        <!-- Tag display -->
+        <div class="flex flex-wrap gap-2">
+          <span v-for="(tag, index) in newTags" :key="index"
+            class="px-2 py-1 text-sm rounded bg-gray-700">
+            {{ tag }}
+            <button @click="removeTag(index)" class="ml-1 text-red-400">x</button>
+          </span>
+        </div>
+
+        <!-- Submit -->
+        <button @click="createTask" class="w-full py-2 mt-2 rounded bg-sky-600 hover:bg-sky-300 text-black">
+          Create Task
+        </button>
+      </div>
+
+      <!-- Task List -->
+      <div v-if="tasks?.length" class="space-y-6">
+        <div v-for="task in tasks" :key="task.id" class="border border-gray-700 rounded-lg p-4 space-y-2">
+          <div class="flex justify-between items-center">
+            <h3 class="text-lg font-semibold">
+              {{ task.name }}
+              <span v-if="task.done" class="text-green-400 ml-2">(done)</span>
+            </h3>
+            <div class="flex gap-2">
+              <button @click="toggleDone(task.id)" class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">
+                Toggle Done
+              </button>
+              <button @click="startEdit(task)" class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">
+                Edit
+              </button>
+              <button @click="deleteTask(task.id)" class="px-2 py-1 rounded bg-red-600 hover:bg-red-400 text-black">
+                Delete
+              </button>
+            </div>
+          </div>
+          <p class="text-sm text-gray-400">{{ task.description }}</p>
+          <div class="flex flex-wrap gap-2 text-sm">
+            <span v-for="tag in task.tags" :key="tag.id"
+              class="px-2 py-1 rounded" :style="{ backgroundColor: tag.color }">
+              {{ tag.name }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Task Panel -->
+      <div v-if="editingTaskId" class="space-y-4 border border-gray-700 rounded-lg p-4">
+        <h2 class="text-xl font-semibold">Edit Task</h2>
+        <input v-model="editName" type="text" placeholder="Task name"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
+        <textarea v-model="editDescription" placeholder="Description"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded"></textarea>
+        <input v-model="editTags" type="text" placeholder="Tags (space-separated)"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
+
+        <div class="flex gap-2">
+          <button @click="saveTask" class="flex-1 py-2 rounded bg-sky-600 hover:bg-sky-300 text-black">Save</button>
+          <button @click="cancelEdit" class="flex-1 py-2 rounded bg-gray-700 hover:bg-gray-600">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
