@@ -31,6 +31,7 @@ const editingTaskId = ref<number | null>(null);
 const editName = ref('');
 const editDescription = ref('');
 const editTags = ref<string[]>([]);
+const editTagsString = ref('');
 
 // ----------------------------
 // Data fetching (Nuxt 3+)
@@ -98,7 +99,7 @@ const startEdit = (task: Task) => {
   editingTaskId.value = task.id;
   editName.value = task.name;
   editDescription.value = task.description || '';
-  editTags.value = task.tags.map(tag => tag.name);
+  editTagsString.value = task.tags.map(tag => tag.name).join(' '); // space-separated string
 };
 
 const cancelEdit = () => {
@@ -124,7 +125,7 @@ const saveTask = async () => {
     await $fetch(`/api/tasks/${editingTaskId.value}/tags-multiple`, {
       method: 'POST',
       body: {
-        tagString: editTags.value.join(' ')
+        tagString: editTagsString.value.trim()
       }
     });
 
@@ -179,8 +180,8 @@ const toggleDone = async (id: number) => {
         <h2 class="text-xl font-semibold">Create Task</h2>
         <input v-model="name" type="text" placeholder="Task name"
           class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600" />
-        <textarea v-model="description" placeholder="Description (optional)"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600"></textarea>
+        <input v-model="description" placeholder="Description (optional)"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600" />
 
         <!-- Tag input -->
         <div class="flex gap-2 items-center">
@@ -239,9 +240,9 @@ const toggleDone = async (id: number) => {
         <h2 class="text-xl font-semibold">Edit Task</h2>
         <input v-model="editName" type="text" placeholder="Task name"
           class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
-        <textarea v-model="editDescription" placeholder="Description"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded"></textarea>
-        <input v-model="editTags" type="text" placeholder="Tags (space-separated)"
+        <input v-model="editDescription" type="text" placeholder="Description"
+          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
+        <input v-model="editTagsString" type="text" placeholder="Tags"
           class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
 
         <div class="flex gap-2">
