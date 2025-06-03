@@ -14,14 +14,16 @@ npm run
 
 ### **TasksController** (`[Route("api/tasks")]`)
 
-| Method | Route                  | Description                |
-| ------ | ---------------------- | -------------------------- |
-| GET    | `/api/tasks`           | Get all tasks              |
-| GET    | `/api/tasks/{id}`      | Get a specific task by ID  |
-| POST   | `/api/tasks`           | Create a new task          |
-| PUT    | `/api/tasks/{id}`      | Update an existing task    |
-| DELETE | `/api/tasks/{id}`      | Delete a task              |
-| POST   | `/api/tasks/{id}/tags` | Associate tags with a task |
+| Method | Route                           | Description                   |
+| ------ | ------------------------------- | ----------------------------- |
+| GET    | `/api/tasks`                    | Get all tasks                 |
+| GET    | `/api/tasks/{id}`               | Get a specific task by ID     |
+| POST   | `/api/tasks`                    | Create a new task             |
+| PUT    | `/api/tasks/{id}`               | Update an existing task       |
+| DELETE | `/api/tasks/{id}`               | Delete a task                 |
+| PATCH  | `/api/tasks/{id}/done`          | Toggle task Done/Undone       |
+| POST   | `/api/tasks/{id}/tags-single`   | Assign a single tag to a task |
+| POST   | `/api/tasks/{id}/tags-multiple` | Assign multiple tag to a task |
 
 ---
 
@@ -31,12 +33,44 @@ npm run
 | ------ | ---------------------- | ----------------------------------- |
 | GET    | `/api/tags`            | Get all tags                        |
 | GET    | `/api/tags/{id}`       | Get a specific tag by ID            |
-| POST   | `/api/tags`            | Create a new tag                    |
-| PUT    | `/api/tags/{id}`       | Update a tag                        |
-| DELETE | `/api/tags/{id}`       | Delete a tag                        |
 | GET    | `/api/tags/{id}/tasks` | Get all tasks associated with a tag |
+| POST   | `/api/tags`            | Create a new tag                    |
+| PUT    | `/api/tags/{id}`       | Update an existig tag               |
+| DELETE | `/api/tags/{id}`       | Delete a tag from db                |
 
 ---
+
+## Validation Rules
+
+### Task Model
+| Field        | Validation                               |
+|--------------|------------------------------------------|
+| Id           | Set automatically by db                  |
+| Name         | Required, Max length: 100                |
+| Description  | Optional, Max length: 500                |
+| Done         | Defaults to false                        |
+| DateCreated  | Automatically set (formatted DD/MM/YYYY) |
+
+### Tag Model
+| Field        | Validation                               |
+|--------------|------------------------------------------|
+| Name         | Required, Max length: 50                 |
+| Color        | Optional, Default: #cccccc             |
+|              | Max length: 7, Min length: 4             |
+
+### Other
+- Controllers enforce `ModelState.IsValid` checks before save.
+- API returns `400 Bad Request` with error details on validation failure.
+
+## Logging & Exceptions
+
+- All controllers use `ILogger<T>` for structured logging.
+- Logs use message templates for structured key-value output.
+
+| Level       | Description                                | Examples                                        |
+|-------------|--------------------------------------------|-------------------------------------------------|
+| Warning     | Resource not found or bad input            | Missing task/tag IDs, mismatched route/body IDs |
+| Error       | Uncaught exception during DB operations    | Failed saves, update errors, delete errors      |
 
 # (Task) Web Development Interview Test
 
