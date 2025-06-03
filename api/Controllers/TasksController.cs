@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using api.Data;
 using api.Dtos;
+using api.Models;
 
 namespace api.Controllers
 {
@@ -11,9 +12,12 @@ namespace api.Controllers
     {
         // Map to context
         private readonly ProgramDbContext _context;
-        public TasksController(ProgramDbContext context)
+        private readonly ILogger<TasksController> _logger;
+
+        public TasksController(ProgramDbContext context, ILogger<TasksController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // Helper to map Task -> Dto
@@ -22,6 +26,8 @@ namespace api.Controllers
             Id = task.Id,
             Name = task.Name,
             Description = task.Description,
+            Done = task.Done,
+            DateCreated = task.DateCreated.ToString("dd/MM/yyyy"), // Date formatting
             Tags = task.TaskTags.Select(tt => new TagDto
             {
                 Id = tt.Tag.Id,
@@ -39,7 +45,15 @@ namespace api.Controllers
             }
 
             _context.Tasks.Add(task); // Add new task to db
-            await _context.SaveChangesAsync(); // Save changes to db
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to create task.");
+                return StatusCode(500, "An error occurred while creating a task.");
+            }
 
             // return 201 created with link to dto
             var dto = MapToDto(task);
@@ -57,7 +71,7 @@ namespace api.Controllers
                 .ToListAsync();
 
             var tasksDtos = tasks.Select(MapToDto).ToList();
-            return Ok(tasksDtos);
+            return Ok(tasksDtos); // return 200
         }
 
         // READ TASK (by id)
@@ -72,11 +86,12 @@ namespace api.Controllers
 
             if (task == null)
             {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
                 return NotFound(); // return error 404
             }
 
             var dto = MapToDto(task);
-            return Ok(dto);
+            return Ok(dto); // return 200
         }
 
         // UPDATE TASK
@@ -98,12 +113,24 @@ namespace api.Controllers
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (existingTask == null)
+            {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
                 return NotFound(); // return error 404
+            }
 
             existingTask.Name = updatedTask.Name;
             existingTask.Description = updatedTask.Description;
 
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update task.");
+                return StatusCode(500, "An error occurred while updating a task.");
+            }
+
             return NoContent(); // return 204 when updated
         }
 
@@ -115,13 +142,153 @@ namespace api.Controllers
 
             if (task == null)
             {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
                 return NotFound(); // return error 404
             }
 
             _context.Tasks.Remove(task);
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete task.");
+                return StatusCode(500, "An error occurred while deleting a task.");
+            }
 
             return NoContent(); // return 204 when deleted
+        }
+
+        // MARK AS DONE/UNDONE
+        [HttpPatch("{id}/done")]
+        public async Task<IActionResult> ToggleTaskDone(int id)
+        {
+            var task = await _context.Tasks.FindAsync(id);
+
+            if (task == null)
+            {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
+                return NotFound(); // return error 404
+            }
+
+            task.Done = !task.Done;
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to toggle task done.");
+                return StatusCode(500, "An error occurred while marking the task done/undone.");
+            }
+
+            return Ok(new {task.Id, task.Done}); // return 200
+        }
+
+        // ASSIGN TAG TO TASK
+        [HttpPost("{id}/tags-single")]
+        public async Task<IActionResult> AddTagsToTask(int id, [FromBody] List<int> tagIds)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.TaskTags)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+            {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
+                return NotFound(); // return error 404
+            }
+
+            // Remove existing TaskTag relationships
+            task.TaskTags.Clear();
+
+            // Add new TaskTag relationships
+            foreach (var tagId in tagIds.Distinct())
+            {
+                task.TaskTags.Add(new TaskTag { TaskId = id, TagId = tagId });
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to add tag task.");
+                return StatusCode(500, "An error occurred while adding a tag to a task.");
+            }
+
+            return Ok(new { TaskId = id, TagIds = tagIds }); // return 200
+        }
+
+        // ASSIGN MULTIPLE TAGS TO TASK AT ONCE
+        [HttpPost("{id}/tags-multiple")]
+        public async Task<IActionResult> AddTagsFromString(int id, [FromBody] string tagString)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.TaskTags)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (task == null)
+            {
+                _logger.LogWarning("Task with ID {Id} not found.", id);
+                return NotFound();
+            }
+
+            if (string.IsNullOrWhiteSpace(tagString))
+            {
+                return BadRequest("Tag string cannot be empty.");
+            }
+
+            var tagNames = tagString
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var existingTags = await _context.Tags
+                .Where(t => tagNames.Contains(t.Name))
+                .ToListAsync();
+
+            var existingTagNames = existingTags.Select(t => t.Name).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            // Create new tags for ones that don't exist
+            var newTags = tagNames
+                .Where(name => !existingTagNames.Contains(name))
+                .Select(name => new Tag { Name = name })
+                .ToList();
+
+            _context.Tags.AddRange(newTags);
+            try
+            {
+                await _context.SaveChangesAsync(); // Save new tags (to get ids)
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to add tags to task.");
+                return StatusCode(500, "An error occurred while adding tags to a task.");
+            }
+
+            var allTags = existingTags.Concat(newTags).ToList();
+
+            // Clear old tags and reassign
+            task.TaskTags.Clear();
+            foreach (var tag in allTags)
+            {
+                task.TaskTags.Add(new TaskTag { TaskId = id, TagId = tag.Id });
+            }
+
+            try
+            {
+                await _context.SaveChangesAsync(); // Save changes to db
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to add tags to task.");
+                return StatusCode(500, "An error occurred while adding tags to a task.");
+            }
+
+            return Ok(new { TaskId = id, Tags = allTags.Select(t => t.Name).ToList() }); // return 200
         }
     }
 }
