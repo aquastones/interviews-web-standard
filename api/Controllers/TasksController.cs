@@ -31,7 +31,8 @@ namespace api.Controllers
             Tags = task.TaskTags.Select(tt => new TagDto
             {
                 Id = tt.Tag.Id,
-                Name = tt.Tag.Name
+                Name = tt.Tag.Name,
+                Color = tt.Tag.Color
             }).ToList()
         };
 
@@ -183,7 +184,7 @@ namespace api.Controllers
                 return StatusCode(500, "An error occurred while marking the task done/undone.");
             }
 
-            return Ok(new {task.Id, task.Done}); // return 200
+            return Ok(new { task.Id, task.Done }); // return 200
         }
 
         // ASSIGN TAG TO TASK
@@ -224,8 +225,10 @@ namespace api.Controllers
 
         // ASSIGN MULTIPLE TAGS TO TASK AT ONCE
         [HttpPost("{id}/tags-multiple")]
-        public async Task<IActionResult> AddTagsFromString(int id, [FromBody] string tagString)
+        public async Task<IActionResult> AddTagsFromString(int id, [FromBody] TagStringDto dto)
         {
+            var tagString = dto.TagString;
+
             var task = await _context.Tasks
                 .Include(t => t.TaskTags)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -234,11 +237,6 @@ namespace api.Controllers
             {
                 _logger.LogWarning("Task with ID {Id} not found.", id);
                 return NotFound();
-            }
-
-            if (string.IsNullOrWhiteSpace(tagString))
-            {
-                return BadRequest("Tag string cannot be empty.");
             }
 
             var tagNames = tagString
