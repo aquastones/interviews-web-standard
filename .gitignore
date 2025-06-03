@@ -16,3 +16,6 @@
 # Logs and cache (just in case)
 *.log
 *.cache
+
+# Database
+*.db
