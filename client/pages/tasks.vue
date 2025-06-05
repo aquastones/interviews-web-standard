@@ -7,156 +7,41 @@ import TaskForm from '~/components/TaskForm.vue'
 import TaskList from '~/components/TaskList.vue'
 import DeleteConfirm from '~/components/DeleteConfirm.vue'
 
-// Interfaces
-interface Task
-{
-  id: number
-  name: string
-  description?: string
-  done: boolean
-  dateCreated: string
-  tags: Tag[]
-}
-interface Tag
-{
-  id: number
-  name: string
-  color: string
-}
-
-// Variables
-const tasks = ref<Task[]>([]) // Tasks array
-const toastMessage = ref('') // Toast message
-
-const createInit = { name: '', description: '', tags: '' } // Init values for a create form
-const editInit = ref({ name: '', description: '', tags: '' }) // Init values for an edit form
-
-const showToast = ref(false) // Toast visibility
-const showCreateForm = ref(false) // Create form visibility
-const showEditForm = ref(false) // Edit form visibility
-const showDeleteConfirm = ref(false) // Delete confirmation visibility
-
-const taskToEditId = ref<number | null>(null) // Edit task id
-const taskToDeleteId = ref<number | null>(null) // Delete task id
-
-// Functions
-// Fetch tasks from API
-const refreshTasks = async () =>
-{
-  try
-  {
-    const data = await $fetch<Task[]>('/api/tasks')
-    tasks.value = data
-  }
-  catch (e)
-  {
-    console.error(e)
-    toastMessage.value = 'Error loading tasks'
-    showToast.value = true
-  }
-}
-
-// Handle form submit for new task
-const handleCreate = async (payload: { name: string, description: string, tags: string }) =>
-{
-  try
-  {
-    const newTask = await $fetch<Task>('/api/tasks', { method: 'POST', body: { name: payload.name, description: payload.description },}) // Create task on backend
-    await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags }, }) // Add tags
-    showCreateForm.value = false // Hide the form
-    await refreshTasks() // Refresh
-  }
-  catch (err)
-  {
-    console.error(err)
-    toastMessage.value = 'Error creating task'
-    showToast.value = true
-  }
-}
-
-// Load task data into an edit form
-const startEdit = (task: Task) =>
-{
-  taskToEditId.value = task.id
-  editInit.value = { name: task.name, description: task.description || '', tags: task.tags.map((t) => t.name).join(' ') } // Load current data
-  showEditForm.value = true // Show form
-}
-
-// Save edit
-const handleEdit = async (payload: { name: string, description: string, tags: string }) =>
-{
-  if (!taskToEditId.value) return
-  try
-  {
-    await $fetch(`/api/tasks/${taskToEditId.value}`, { method: 'PUT', body: { id: taskToEditId.value, name: payload.name, description: payload.description } }) // Save task
-    await $fetch(`/api/tasks/${taskToEditId.value}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags } }) // Add tags
-    showEditForm.value = false // Hide form
-    taskToEditId.value = null // Reset edit id
-    await refreshTasks() // Refresh
-  }
-  catch (err)
-  {
-    console.error(err)
-    toastMessage.value = 'Error updating task'
-    showToast.value = true
-  }
-}
-
-// Show confirmation pop up
-const confirmDelete = (id: number) => { taskToDeleteId.value = id, showDeleteConfirm.value = true }
-
-// Delete task from API
-const deleteTask = async () =>
-{
-  if (!taskToDeleteId.value) return
-  try
-  {
-    await $fetch(`/api/tasks/${taskToDeleteId.value}`, { method: 'DELETE' }) // Hit the delete endpoint
-    showDeleteConfirm.value = false // Hide pop-up
-    taskToDeleteId.value = null // Reset id
-    await refreshTasks() // Refresh
-  }
-  catch (err)
-  {
-    console.error(err)
-    toastMessage.value = 'Error deleting task'
-    showToast.value = true
-  }
-}
-
-// Toggle task completion
-const toggleDone = async (id: number) =>
-{
-  try
-  {
-    await $fetch(`/api/tasks/${id}/done`, { method: 'PATCH' }) // Hit the toggle done endpoint
-    await refreshTasks() // Refresh
-  }
-  catch (err)
-  {
-    console.error(err)
-    toastMessage.value = 'Error marking task as done'
-    showToast.value = true
-  }
-}
+// Output from useTasks.ts
+const {
+  tasks,
+  toastMessage,
+  showToast,
+  showCreateForm,
+  showEditForm,
+  showDeleteConfirm,
+  createInit,
+  editInit,
+  refreshTasks,
+  handleCreate,
+  handleEdit,
+  startEdit,
+  confirmDelete,
+  deleteTask,
+  toggleDone
+} = useTasks()
 
 // Fetch tasks on page load
 await refreshTasks()
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-900 text-gray-100 font-mono px-4 py-8">
+  <div class="min-h-screen bg-gray-950 text-white font-mono px-4 py-8">
     <!-- Toast Notification -->
     <Toast :message="toastMessage" v-model:show="showToast" />
 
     <div class="max-w-2xl mx-auto space-y-8">
       <!-- Header & Create Button -->
       <div class="flex justify-between items-center">
-        <h1 class="text-4xl font-bold">Task Manager</h1>
-        <button
-          @click="showCreateForm = true"
-          class="text-xl px-4 py-2 bg-sky-600 hover:bg-sky-300 rounded"
-        >
+        <h1 class="text-4xl font-bold">
+          Task Manager
+        </h1>
+        <button @click="showCreateForm = true" class="text-xl px-4 py-2 bg-sky-600 hover:bg-sky-300 rounded-xl">
           + New Task
         </button>
       </div>
@@ -170,7 +55,7 @@ await refreshTasks()
       />
 
       <!-- Empty State Message -->
-      <div v-if="!tasks.length" class="text-xl text-center text-gray-500">
+      <div v-if="!tasks.length" class="text-xl text-center text-gray-500 py-5">
         No tasks found.
       </div>
 
@@ -207,15 +92,3 @@ await refreshTasks()
     </div>
   </div>
 </template>
-
-<style>
-/* Fade animation for transitions */
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s;
-}
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
-</style>
