@@ -6,7 +6,7 @@
         </h1>
 
         <NuxtLink to="/tasks"
-            class="text-3xl px-12 py-6 bg-sky-600 hover:bg-sky-300 text-white rounded-2xl transition-colors duration-500">
+            class="text-3xl px-12 py-6 bg-sky-600 hover:bg-sky-300 text-white rounded-xl transition-colors duration-500">
             Go to tasks
         </NuxtLink>
 
