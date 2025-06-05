@@ -36,6 +36,21 @@ namespace api.Controllers
             }).ToList()
         };
 
+        // Color selection for tags
+        private static readonly string[] TagColors = new[]
+        {
+            "#e0ca3c", // yellow
+            "#3e2f5b", // violet
+            "#e01a4f", // pink
+            "#00c2d1", // blue
+            "#fc814a", // coral
+            "#d6ff79", // green
+            "#b0ff92", // light green
+            "#368f8b", // cyan
+            "#984447", // red
+            "#5f00ba", // purple
+        };
+
         // CREATE TASK
         [HttpPost]
         public async Task<ActionResult<Models.Task>> CreateTask([FromBody] Models.Task task)
@@ -229,6 +244,8 @@ namespace api.Controllers
         {
             var tagString = dto.TagString;
 
+            var random = new Random();
+
             var task = await _context.Tasks
                 .Include(t => t.TaskTags)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -253,8 +270,11 @@ namespace api.Controllers
             // Create new tags for ones that don't exist
             var newTags = tagNames
                 .Where(name => !existingTagNames.Contains(name))
-                .Select(name => new Tag { Name = name })
-                .ToList();
+                .Select(name => new Tag
+                {
+                    Name = name,
+                    Color = TagColors[random.Next(TagColors.Length)]
+                }).ToList();
 
             _context.Tags.AddRange(newTags);
             try
