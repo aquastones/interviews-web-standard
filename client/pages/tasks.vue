@@ -1,255 +1,221 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from 'vue'
 
-// ----------------------------
+// Import components
+import Toast from '~/components/Toast.vue'
+import TaskForm from '~/components/TaskForm.vue'
+import TaskList from '~/components/TaskList.vue'
+import DeleteConfirm from '~/components/DeleteConfirm.vue'
+
 // Interfaces
-// ----------------------------
-interface Task {
-  id: number;
-  name: string;
-  description?: string;
-  done: boolean;
-  dateCreated: string;
-  tags: Tag[];
+interface Task
+{
+  id: number
+  name: string
+  description?: string
+  done: boolean
+  dateCreated: string
+  tags: Tag[]
+}
+interface Tag
+{
+  id: number
+  name: string
+  color: string
 }
 
-interface Tag {
-  id: number;
-  name: string;
-  color: string;
+// Variables
+const tasks = ref<Task[]>([]) // Tasks array
+const toastMessage = ref('') // Toast message
+
+const createInit = { name: '', description: '', tags: '' } // Init values for a create form
+const editInit = ref({ name: '', description: '', tags: '' }) // Init values for an edit form
+
+const showToast = ref(false) // Toast visibility
+const showCreateForm = ref(false) // Create form visibility
+const showEditForm = ref(false) // Edit form visibility
+const showDeleteConfirm = ref(false) // Delete confirmation visibility
+
+const taskToEditId = ref<number | null>(null) // Edit task id
+const taskToDeleteId = ref<number | null>(null) // Delete task id
+
+// Functions
+// Fetch tasks from API
+const refreshTasks = async () =>
+{
+  try
+  {
+    const data = await $fetch<Task[]>('/api/tasks')
+    tasks.value = data
+  }
+  catch (e)
+  {
+    console.error(e)
+    toastMessage.value = 'Error loading tasks'
+    showToast.value = true
+  }
 }
 
-// ----------------------------
-// State
-// ----------------------------
-const name = ref('');
-const description = ref('');
-const newTagInput = ref('');
-const newTags = ref<string[]>([]);
-
-const editingTaskId = ref<number | null>(null);
-const editName = ref('');
-const editDescription = ref('');
-const editTags = ref<string[]>([]);
-const editTagsString = ref('');
-
-// ----------------------------
-// Data fetching (Nuxt 3+)
-// ----------------------------
-const { data: tasks, pending, error, refresh } = await useAsyncData<Task[]>('tasks', () =>
-  $fetch('/api/tasks')
-);
-
-const { data: tags } = await useAsyncData<Tag[]>('tags', () =>
-  $fetch('/api/tags')
-);
-
-// ----------------------------
-// Tag management
-// ----------------------------
-const addTag = () => {
-  const tag = newTagInput.value.trim();
-  if (tag && !newTags.value.includes(tag)) {
-    newTags.value.push(tag);
+// Handle form submit for new task
+const handleCreate = async (payload: { name: string, description: string, tags: string }) =>
+{
+  try
+  {
+    const newTask = await $fetch<Task>('/api/tasks', { method: 'POST', body: { name: payload.name, description: payload.description },}) // Create task on backend
+    await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags }, }) // Add tags
+    showCreateForm.value = false // Hide the form
+    await refreshTasks() // Refresh
   }
-  newTagInput.value = '';
-};
-
-const removeTag = (index: number) => {
-  newTags.value.splice(index, 1);
-};
-
-// ----------------------------
-// Create task
-// ----------------------------
-const createTask = async () => {
-  if (!name.value.trim()) return alert('Name is required.');
-
-  try {
-    const newTask = await $fetch<Task>('/api/tasks', {
-      method: 'POST',
-      body: {
-        name: name.value,
-        description: description.value,
-      },
-    });
-
-    await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, {
-      method: 'POST',
-      body: {
-        tagString: newTags.value.join(' ')
-      }
-    });
-
-    name.value = '';
-    description.value = '';
-    newTags.value = [];
-
-    await refresh();
-  } catch (err) {
-    console.error('Failed to create task:', err);
-    alert('Error creating task.');
+  catch (err)
+  {
+    console.error(err)
+    toastMessage.value = 'Error creating task'
+    showToast.value = true
   }
-};
+}
 
-// ----------------------------
-// Edit task
-// ----------------------------
-const startEdit = (task: Task) => {
-  editingTaskId.value = task.id;
-  editName.value = task.name;
-  editDescription.value = task.description || '';
-  editTagsString.value = task.tags.map(tag => tag.name).join(' '); // space-separated string
-};
+// Load task data into an edit form
+const startEdit = (task: Task) =>
+{
+  taskToEditId.value = task.id
+  editInit.value = { name: task.name, description: task.description || '', tags: task.tags.map((t) => t.name).join(' ') } // Load current data
+  showEditForm.value = true // Show form
+}
 
-const cancelEdit = () => {
-  editingTaskId.value = null;
-  editName.value = '';
-  editDescription.value = '';
-  editTags.value = [];
-};
-
-const saveTask = async () => {
-  if (!editingTaskId.value) return;
-
-  try {
-    await $fetch(`/api/tasks/${editingTaskId.value}`, {
-      method: 'PUT',
-      body: {
-        id: editingTaskId.value,
-        name: editName.value,
-        description: editDescription.value,
-      },
-    });
-
-    await $fetch(`/api/tasks/${editingTaskId.value}/tags-multiple`, {
-      method: 'POST',
-      body: {
-        tagString: editTagsString.value.trim()
-      }
-    });
-
-    await refresh();
-    cancelEdit();
-  } catch (err) {
-    console.error('Update failed:', err);
-    alert('Could not update task.');
+// Save edit
+const handleEdit = async (payload: { name: string, description: string, tags: string }) =>
+{
+  if (!taskToEditId.value) return
+  try
+  {
+    await $fetch(`/api/tasks/${taskToEditId.value}`, { method: 'PUT', body: { id: taskToEditId.value, name: payload.name, description: payload.description } }) // Save task
+    await $fetch(`/api/tasks/${taskToEditId.value}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags } }) // Add tags
+    showEditForm.value = false // Hide form
+    taskToEditId.value = null // Reset edit id
+    await refreshTasks() // Refresh
   }
-};
-
-// ----------------------------
-// Delete task
-// ----------------------------
-const deleteTask = async (id: number) => {
-  try {
-    await $fetch(`/api/tasks/${id}`, {
-      method: 'DELETE',
-    });
-    await refresh();
-  } catch (err) {
-    console.error('Delete failed:', err);
-    alert('Could not delete task.');
+  catch (err)
+  {
+    console.error(err)
+    toastMessage.value = 'Error updating task'
+    showToast.value = true
   }
-};
+}
 
-// ----------------------------
-// Toggle task done status
-// ----------------------------
-const toggleDone = async (id: number) => {
-  try {
-    await $fetch(`/api/tasks/${id}/done`, {
-      method: 'PATCH',
-    });
-    await refresh();
-  } catch (err) {
-    console.error('Failed to toggle task:', err);
-    alert('Error marking task as done.');
+// Show confirmation pop up
+const confirmDelete = (id: number) => { taskToDeleteId.value = id, showDeleteConfirm.value = true }
+
+// Delete task from API
+const deleteTask = async () =>
+{
+  if (!taskToDeleteId.value) return
+  try
+  {
+    await $fetch(`/api/tasks/${taskToDeleteId.value}`, { method: 'DELETE' }) // Hit the delete endpoint
+    showDeleteConfirm.value = false // Hide pop-up
+    taskToDeleteId.value = null // Reset id
+    await refreshTasks() // Refresh
   }
-};
+  catch (err)
+  {
+    console.error(err)
+    toastMessage.value = 'Error deleting task'
+    showToast.value = true
+  }
+}
+
+// Toggle task completion
+const toggleDone = async (id: number) =>
+{
+  try
+  {
+    await $fetch(`/api/tasks/${id}/done`, { method: 'PATCH' }) // Hit the toggle done endpoint
+    await refreshTasks() // Refresh
+  }
+  catch (err)
+  {
+    console.error(err)
+    toastMessage.value = 'Error marking task as done'
+    showToast.value = true
+  }
+}
+
+// Fetch tasks on page load
+await refreshTasks()
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-900 text-gray-100 font-mono px-4 py-8">
+    <!-- Toast Notification -->
+    <Toast :message="toastMessage" v-model:show="showToast" />
+
     <div class="max-w-2xl mx-auto space-y-8">
-
-      <!-- Header -->
-      <h1 class="text-3xl font-bold text-center">Task Manager</h1>
-
-      <!-- Create Task Form -->
-      <div class="space-y-4 border border-gray-700 rounded-lg p-4">
-        <h2 class="text-xl font-semibold">Create Task</h2>
-        <input v-model="name" type="text" placeholder="Task name"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600" />
-        <input v-model="description" placeholder="Description (optional)"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded outline-none focus:ring-2 focus:ring-sky-600" />
-
-        <!-- Tag input -->
-        <div class="flex gap-2 items-center">
-          <input v-model="newTagInput" @keydown.enter.prevent="addTag" type="text" placeholder="Add tag"
-            class="flex-1 bg-gray-800 border border-gray-700 p-2 rounded" />
-          <button @click="addTag" class="px-3 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">Add</button>
-        </div>
-
-        <!-- Tag display -->
-        <div class="flex flex-wrap gap-2">
-          <span v-for="(tag, index) in newTags" :key="index"
-            class="px-2 py-1 text-sm rounded bg-gray-700">
-            {{ tag }}
-            <button @click="removeTag(index)" class="ml-1 text-red-400">x</button>
-          </span>
-        </div>
-
-        <!-- Submit -->
-        <button @click="createTask" class="w-full py-2 mt-2 rounded bg-sky-600 hover:bg-sky-300 text-black">
-          Create Task
+      <!-- Header & Create Button -->
+      <div class="flex justify-between items-center">
+        <h1 class="text-4xl font-bold">Task Manager</h1>
+        <button
+          @click="showCreateForm = true"
+          class="text-xl px-4 py-2 bg-sky-600 hover:bg-sky-300 rounded"
+        >
+          + New Task
         </button>
       </div>
 
-      <!-- Task List -->
-      <div v-if="tasks?.length" class="space-y-6">
-        <div v-for="task in tasks" :key="task.id" class="border border-gray-700 rounded-lg p-4 space-y-2">
-          <div class="flex justify-between items-center">
-            <h3 class="text-lg font-semibold">
-              {{ task.name }}
-              <span v-if="task.done" class="text-green-400 ml-2">(done)</span>
-            </h3>
-            <div class="flex gap-2">
-              <button @click="toggleDone(task.id)" class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">
-                Toggle Done
-              </button>
-              <button @click="startEdit(task)" class="px-2 py-1 rounded bg-sky-600 hover:bg-sky-300 text-black">
-                Edit
-              </button>
-              <button @click="deleteTask(task.id)" class="px-2 py-1 rounded bg-red-600 hover:bg-red-400 text-black">
-                Delete
-              </button>
-            </div>
-          </div>
-          <p class="text-sm text-gray-400">{{ task.description }}</p>
-          <div class="flex flex-wrap gap-2 text-sm">
-            <span v-for="tag in task.tags" :key="tag.id"
-              class="px-2 py-1 rounded" :style="{ backgroundColor: tag.color }">
-              {{ tag.name }}
-            </span>
-          </div>
-        </div>
+      <!-- Task List Component -->
+      <TaskList
+        :tasks="tasks"
+        @toggle-done="toggleDone"
+        @edit="startEdit"
+        @request-delete="confirmDelete"
+      />
+
+      <!-- Empty State Message -->
+      <div v-if="!tasks.length" class="text-xl text-center text-gray-500">
+        No tasks found.
       </div>
 
-      <!-- Edit Task Panel -->
-      <div v-if="editingTaskId" class="space-y-4 border border-gray-700 rounded-lg p-4">
-        <h2 class="text-xl font-semibold">Edit Task</h2>
-        <input v-model="editName" type="text" placeholder="Task name"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
-        <input v-model="editDescription" type="text" placeholder="Description"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
-        <input v-model="editTagsString" type="text" placeholder="Tags"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded" />
+      <!-- Create Form -->
+      <TaskForm
+        mode="create"
+        :visible="showCreateForm"
+        :initialName="createInit.name"
+        :initialDescription="createInit.description"
+        :initialTags="createInit.tags"
+        @submit="handleCreate"
+        @cancel="showCreateForm = false"
+        @error="(msg) => { toastMessage = msg; showToast = true }"
+      />
 
-        <div class="flex gap-2">
-          <button @click="saveTask" class="flex-1 py-2 rounded bg-sky-600 hover:bg-sky-300 text-black">Save</button>
-          <button @click="cancelEdit" class="flex-1 py-2 rounded bg-gray-700 hover:bg-gray-600">Cancel</button>
-        </div>
-      </div>
+      <!-- Edit Form -->
+      <TaskForm
+        mode="edit"
+        :visible="showEditForm"
+        :initialName="editInit.name"
+        :initialDescription="editInit.description"
+        :initialTags="editInit.tags"
+        @submit="handleEdit"
+        @cancel="showEditForm = false"
+        @error="(msg) => { toastMessage = msg; showToast = true }"
+      />
+
+      <!-- Delete Confirmation Modal -->
+      <DeleteConfirm
+        :visible="showDeleteConfirm"
+        @confirm="deleteTask"
+        @cancel="showDeleteConfirm = false"
+      />
     </div>
   </div>
 </template>
+
+<style>
+/* Fade animation for transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
