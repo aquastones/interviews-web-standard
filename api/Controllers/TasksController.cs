@@ -36,20 +36,27 @@ namespace api.Controllers
             }).ToList()
         };
 
-        // Color selection for tags
+        // Color palette for tags
         private static readonly string[] TagColors = new[]
         {
-            "#e0ca3c", // yellow
-            "#3e2f5b", // violet
-            "#e01a4f", // pink
-            "#00c2d1", // blue
-            "#fc814a", // coral
-            "#d6ff79", // green
-            "#b0ff92", // light green
-            "#368f8b", // cyan
-            "#984447", // red
-            "#5f00ba", // purple
+            "#3E5641", // Hunter Green
+            "#DD6E42", // Burnt Sienna Orange
+            "#59A96A", // Jade Green
+            "#FFC43D", // Amber Yellow
+            "#5F4BB6", // Iris Blue
+            "#5DD9C1", // Turquoise
+            "#F97068", // Bittersweet Red
+            "#E9D758", // Arylide Yellow
+            "#665687", // Ultra Violet
+            "#8E518D", // Plum Purple
         };
+
+        // Hash function for color selection
+        private string HashToColor(string input)
+        {
+            int hash = input.ToLowerInvariant().Aggregate(0, (acc, c) => acc + c);
+            return TagColors[hash % TagColors.Length];
+        }
 
         // CREATE TASK
         [HttpPost]
@@ -273,7 +280,7 @@ namespace api.Controllers
                 .Select(name => new Tag
                 {
                     Name = name,
-                    Color = TagColors[random.Next(TagColors.Length)]
+                    Color = HashToColor(name)
                 }).ToList();
 
             _context.Tags.AddRange(newTags);
