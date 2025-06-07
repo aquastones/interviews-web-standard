@@ -2,7 +2,7 @@
   <!-- Form (only visible when 'visible' is true) -->
   <div v-if="visible" class="fixed inset-0 backdrop-blur z-50 flex items-center justify-center">
     <!-- Form content container -->
-    <div class="border border-gray-800 bg-gray-900 rounded-xl w-full max-w-lg p-6 relative">
+    <div class="border border-gray-700 bg-gray-800 rounded-xl w-full max-w-lg p-6 relative">
       <!-- Dynamic title based on the mode (Create or Edit) -->
       <h2 class="text-2xl font-semibold mb-4">
         {{ mode === 'create' ? 'Create Task' : 'Edit Task' }}
@@ -16,7 +16,7 @@
           @input="nameError = false"
           type="text"
           placeholder="Task name (*)"
-          :class="['w-full bg-gray-800 p-2 rounded-xl mb-3 focus:outline-none focus:ring-2',
+          :class="['w-full bg-gray-700 p-2 rounded-xl mb-3 focus:outline-none focus:ring-2',
             nameError
               ? 'border border-red-500'
               : 'border border-gray-700 focus:ring-sky-600'
@@ -27,14 +27,14 @@
           v-model="description"
           type="text"
           placeholder="Description"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-sky-600"/>
+          class="w-full bg-gray-700 border border-gray-700 p-2 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-sky-600"/>
 
         <!-- Input field for task tags -->
         <input
           v-model="tags"
           type="text"
           placeholder="Tags"
-          class="w-full bg-gray-800 border border-gray-700 p-2 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-sky-600"/>
+          class="w-full bg-gray-700 border border-gray-700 p-2 rounded-xl mb-4 focus:outline-none focus:ring-2 focus:ring-sky-600"/>
 
         <!-- Buttons -->
         <div class="flex justify-end gap-2">

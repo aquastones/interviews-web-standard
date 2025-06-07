@@ -1,26 +1,27 @@
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 // Interfaces
 interface Task
 {
-  id: number
-  name: string
-  description?: string
-  done: boolean
-  dateCreated: string
-  tags: Tag[]
+    id: number
+    name: string
+    description?: string
+    done: boolean
+    dateCreated: string
+    tags: Tag[]
 }
 interface Tag
 {
-  id: number
-  name: string
-  color: string
+    id: number
+    name: string
+    color: string
 }
 
 export function useTasks()
 {
     // Variables
     const tasks = ref<Task[]>([]) // Tasks array
+    const tags = ref<Tag[]>([]) // Tags array
     const toastMessage = ref('') // Toast message
 
     const createInit = { name: '', description: '', tags: '' } // Init values for a create form
@@ -33,110 +34,174 @@ export function useTasks()
 
     const taskToEditId = ref<number | null>(null) // Edit task id
     const taskToDeleteId = ref<number | null>(null) // Delete task id
+    const selectedTagIds = ref<number[]>([]) // Filter by tags ids
 
     // Functions
+    // Filter tags
+    const filteredTasks = computed(() =>
+    {
+        if (!selectedTagIds.value.length) return tasks.value
+        return tasks.value.filter(task =>
+        task.tags.some(t => selectedTagIds.value.includes(t.id))
+        )
+    })
+
     // Fetch tasks from API
     const refreshTasks = async () =>
     {
-    try
-    {
-        const data = await $fetch<Task[]>('/api/tasks')
-        tasks.value = data
-    }
-    catch (e)
-    {
-        console.error(e)
-        toastMessage.value = 'Error loading tasks'
-        showToast.value = true
-    }
-    }
-
-    // Handle form submit for new task
-    const handleCreate = async (payload: { name: string, description: string, tags: string }) =>
-    {
-    try
-    {
-        const newTask = await $fetch<Task>('/api/tasks', { method: 'POST', body: { name: payload.name, description: payload.description },}) // Create task on backend
-        await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags }, }) // Add tags
-        showCreateForm.value = false // Hide the form
-        await refreshTasks() // Refresh
-    }
-    catch (err)
-    {
-        console.error(err)
-        toastMessage.value = 'Error creating task'
-        showToast.value = true
-    }
+        try
+        {
+            tasks.value = await $fetch<Task[]>('/api/tasks')
+        }
+        catch (e)
+        {
+            console.error(e)
+            toastMessage.value = 'Error loading tasks'
+            showToast.value = true
+        }
     }
 
-    // Load task data into an edit form
+    // Fetch tags from API
+    const refreshTags = async () =>
+    {
+        try
+        {
+            tags.value = await $fetch<Tag[]>('/api/tags')
+        }
+        catch (e)
+        {
+            console.error(e)
+            toastMessage.value = 'Error loading tags'
+            showToast.value = true
+        }
+    }
+
+    // Toggle which tags are active filters
+    const toggleTagFilter = (tagId: number) =>
+    {
+        const idx = selectedTagIds.value.indexOf(tagId)
+        if (idx === -1) selectedTagIds.value.push(tagId)
+        else selectedTagIds.value.splice(idx, 1)
+    }
+
+    const handleCreate = async (payload: { name: string; description: string; tags: string }) => {
+        try
+        {
+            const newTask = await $fetch<Task>('/api/tasks', {method: 'POST',body: { name: payload.name, description: payload.description },})
+            await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, {method: 'POST',body: { tagString: payload.tags },})
+            showCreateForm.value = false
+            await refreshTags()
+            await refreshTasks()
+        }
+        catch (err)
+        {
+            console.error(err)
+            toastMessage.value = 'Error creating task'
+            showToast.value = true
+        }
+    }
+
     const startEdit = (task: Task) =>
     {
-    taskToEditId.value = task.id
-    editInit.value = { name: task.name, description: task.description || '', tags: task.tags.map((t) => t.name).join(' ') } // Load current data
-    showEditForm.value = true // Show form
+        taskToEditId.value = task.id
+        editInit.value =
+        {
+            name: task.name,
+            description: task.description || '',
+            tags: task.tags.map(t => t.name).join(' '),
+        }
+        showEditForm.value = true
     }
 
-    // Save edit
-    const handleEdit = async (payload: { name: string, description: string, tags: string }) =>
+    const handleEdit = async (payload: { name: string; description: string; tags: string }) =>
     {
-    if (!taskToEditId.value) return
-    try
-    {
-        await $fetch(`/api/tasks/${taskToEditId.value}`, { method: 'PUT', body: { id: taskToEditId.value, name: payload.name, description: payload.description } }) // Save task
-        await $fetch(`/api/tasks/${taskToEditId.value}/tags-multiple`, { method: 'POST', body: { tagString: payload.tags } }) // Add tags
-        showEditForm.value = false // Hide form
-        taskToEditId.value = null // Reset edit id
-        await refreshTasks() // Refresh
-    }
-    catch (err)
-    {
-        console.error(err)
-        toastMessage.value = 'Error updating task'
-        showToast.value = true
-    }
+        if (!taskToEditId.value) return
+        try
+        {
+            await $fetch(`/api/tasks/${taskToEditId.value}`,{method: 'PUT', body: {id: taskToEditId.value, name: payload.name, description: payload.description},})
+            await $fetch(`/api/tasks/${taskToEditId.value}/tags-multiple`, {method: 'POST', body: {tagString: payload.tags},})
+            showEditForm.value = false
+            taskToEditId.value = null
+            await refreshTags()
+            await refreshTasks()
+        }
+        catch (err)
+        {
+            console.error(err)
+            toastMessage.value = 'Error updating task'
+            showToast.value = true
+        }
     }
 
-    // Show confirmation pop up
-    const confirmDelete = (id: number) => { taskToDeleteId.value = id, showDeleteConfirm.value = true }
+    const confirmDelete = (id: number) =>
+    {
+        taskToDeleteId.value = id
+        showDeleteConfirm.value = true
+    }
 
-    // Delete task from API
     const deleteTask = async () =>
     {
-    if (!taskToDeleteId.value) return
-    try
-    {
-        await $fetch(`/api/tasks/${taskToDeleteId.value}`, { method: 'DELETE' }) // Hit the delete endpoint
-        showDeleteConfirm.value = false // Hide pop-up
-        taskToDeleteId.value = null // Reset id
-        await refreshTasks() // Refresh
-    }
-    catch (err)
-    {
-        console.error(err)
-        toastMessage.value = 'Error deleting task'
-        showToast.value = true
-    }
+        if (!taskToDeleteId.value) return
+        try
+        {
+            await $fetch(`/api/tasks/${taskToDeleteId.value}`, { method: 'DELETE' })
+            showDeleteConfirm.value = false
+            taskToDeleteId.value = null
+            await refreshTags()
+            await refreshTasks()
+        }
+        catch (err)
+        {
+            console.error(err)
+            toastMessage.value = 'Error deleting task'
+            showToast.value = true
+        }
     }
 
-    // Toggle task completion
+    const deleteTag = async (tagId: number) => {
+        try
+        {
+            await $fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
+            await refreshTags()
+            await refreshTasks()
+            if (selectedTagIds.value.includes(tagId))
+            {
+                selectedTagIds.value = selectedTagIds.value.filter(id => id !== tagId)
+            }
+        }
+        catch (err)
+        {
+            console.error(err)
+            toastMessage.value = 'Error deleting tag'
+            showToast.value = true
+        }
+    }
+
     const toggleDone = async (id: number) =>
     {
-    try
-    {
-        await $fetch(`/api/tasks/${id}/done`, { method: 'PATCH' }) // Hit the toggle done endpoint
-        await refreshTasks() // Refresh
+        try
+        {
+            await $fetch(`/api/tasks/${id}/done`, { method: 'PATCH' })
+            await refreshTasks()
+        }
+        catch (err)
+        {
+            console.error(err)
+            toastMessage.value = 'Error marking task as done'
+            showToast.value = true
+        }
     }
-    catch (err)
-    {
-        console.error(err)
-        toastMessage.value = 'Error marking task as done'
-        showToast.value = true
-    }
-    }
+
+    // Initial fetch
+    onMounted(() => {
+        refreshTasks()
+        refreshTags()
+    })
 
     return {
         tasks,
+        tags,
+        selectedTagIds,
         toastMessage,
         showToast,
         showCreateForm,
@@ -146,12 +211,16 @@ export function useTasks()
         editInit,
         taskToEditId,
         taskToDeleteId,
+        filteredTasks,
         refreshTasks,
+        refreshTags,
         handleCreate,
-        handleEdit,
         startEdit,
+        handleEdit,
         confirmDelete,
         deleteTask,
+        deleteTag,
         toggleDone,
-    }
+        toggleTagFilter,
+  }
 }
