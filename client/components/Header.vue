@@ -3,8 +3,7 @@
     <h1 class="text-4xl font-bold">{{ title }}</h1>
     <button
       @click="$emit('action')"
-      class="text-xl px-4 py-2 bg-sky-600 hover:bg-sky-500 rounded-xl"
-    >
+      class="text-xl px-4 py-2 bg-gray-700 hover:bg-sky-600 text-white rounded-xl">
       {{ buttonLabel }}
     </button>
   </div>

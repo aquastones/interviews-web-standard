@@ -39,12 +39,25 @@ export function useTasks()
     const selectedTagIds = ref<number[]>([]) // Filter by tags ids
 
     // Functions
+    // Toggle which tags are active filters
+    const toggleTagFilter = (tagId: number) =>
+    {
+        const idx = selectedTagIds.value.indexOf(tagId)
+        if (idx === -1) selectedTagIds.value.push(tagId)
+        else selectedTagIds.value.splice(idx, 1)
+    }
+
     // Filter tags
     const filteredTasks = computed(() =>
     {
         if (!selectedTagIds.value.length) return tasks.value
+
         return tasks.value.filter(task =>
-        task.tags.some(t => selectedTagIds.value.includes(t.id))
+            selectedTagIds.value.every
+            (
+            tagId =>
+            task.tags.some(t => t.id === tagId)
+            )
         )
     })
 
@@ -76,14 +89,6 @@ export function useTasks()
             toastMessage.value = 'Error loading tags'
             showToast.value = true
         }
-    }
-
-    // Toggle which tags are active filters
-    const toggleTagFilter = (tagId: number) =>
-    {
-        const idx = selectedTagIds.value.indexOf(tagId)
-        if (idx === -1) selectedTagIds.value.push(tagId)
-        else selectedTagIds.value.splice(idx, 1)
     }
 
     // Create task on the backend
