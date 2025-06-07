@@ -15,7 +15,8 @@ const {
   showToast,
   showCreateForm,
   showEditForm,
-  showDeleteConfirm,
+  showDeleteConfirmTask,
+  showDeleteConfirmTag,
   createInit,
   editInit,
   refreshTasks,
@@ -23,12 +24,13 @@ const {
   handleCreate,
   handleEdit,
   startEdit,
-  confirmDelete,
+  confirmDeleteTask,
+  confirmDeleteTag,
   deleteTask,
+  deleteTag,
   toggleDone,
   toggleTagFilter,
   selectedTagIds,
-  deleteTag,
 } = useTasks()
 
 // load both tasks and tags on page load
@@ -57,9 +59,7 @@ onMounted(async () =>
               :style="{ backgroundColor: tag.color }">
               {{ tag.name }}
             </button>
-            <button
-              @click="deleteTag(tag.id)"
-              class="ml-2 text-red-500 hover:text-red-300">
+            <button @click="confirmDeleteTag(tag.id)" class="ml-2 text-red-500 hover:text-red-300">
               -
             </button>
           </li>
@@ -81,7 +81,7 @@ onMounted(async () =>
           :tasks="filteredTasks"
           @toggle-done="toggleDone"
           @edit="startEdit"
-          @request-delete="confirmDelete"
+          @request-delete="confirmDeleteTask"
         />
 
         <div v-if="!filteredTasks.length" class="text-xl text-center text-gray-500 py-5">
@@ -112,11 +112,20 @@ onMounted(async () =>
           @error="msg => { toastMessage = msg; showToast = true }"
         />
 
-        <!-- Delete Confirmation -->
+        <!-- Delete Confirmation for Tasks -->
         <DeleteConfirm
-          :visible="showDeleteConfirm"
+          :visible="showDeleteConfirmTask"
+          mode="task"
           @confirm="deleteTask"
-          @cancel="showDeleteConfirm = false"
+          @cancel="showDeleteConfirmTask = false"
+        />
+
+        <!-- Delete Confirmation for Tags -->
+        <DeleteConfirm
+          :visible="showDeleteConfirmTag"
+          mode="tag"
+          @confirm="deleteTag"
+          @cancel="showDeleteConfirmTag = false"
         />
       </main>
     </div>

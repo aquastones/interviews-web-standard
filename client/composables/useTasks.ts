@@ -30,10 +30,12 @@ export function useTasks()
     const showToast = ref(false) // Toast visibility
     const showCreateForm = ref(false) // Create form visibility
     const showEditForm = ref(false) // Edit form visibility
-    const showDeleteConfirm = ref(false) // Delete confirmation visibility
+    const showDeleteConfirmTask = ref(false) // Delete confirmation visibility for tasks
+    const showDeleteConfirmTag = ref(false) // Delete confirmation visibility for tags
 
     const taskToEditId = ref<number | null>(null) // Edit task id
     const taskToDeleteId = ref<number | null>(null) // Delete task id
+    const tagToDeleteId = ref<number | null>(null) // Delete tag id
     const selectedTagIds = ref<number[]>([]) // Filter by tags ids
 
     // Functions
@@ -84,6 +86,7 @@ export function useTasks()
         else selectedTagIds.value.splice(idx, 1)
     }
 
+    // Create task on the backend
     const handleCreate = async (payload: { name: string; description: string; tags: string }) => {
         try
         {
@@ -101,6 +104,7 @@ export function useTasks()
         }
     }
 
+    // Init edit task
     const startEdit = (task: Task) =>
     {
         taskToEditId.value = task.id
@@ -113,6 +117,7 @@ export function useTasks()
         showEditForm.value = true
     }
 
+    // Save task edit changes
     const handleEdit = async (payload: { name: string; description: string; tags: string }) =>
     {
         if (!taskToEditId.value) return
@@ -133,19 +138,21 @@ export function useTasks()
         }
     }
 
-    const confirmDelete = (id: number) =>
+    // Start task delete dialog
+    const confirmDeleteTask = (id: number) =>
     {
         taskToDeleteId.value = id
-        showDeleteConfirm.value = true
+        showDeleteConfirmTask.value = true
     }
 
+    // Delete task
     const deleteTask = async () =>
     {
         if (!taskToDeleteId.value) return
         try
         {
             await $fetch(`/api/tasks/${taskToDeleteId.value}`, { method: 'DELETE' })
-            showDeleteConfirm.value = false
+            showDeleteConfirmTask.value = false
             taskToDeleteId.value = null
             await refreshTags()
             await refreshTasks()
@@ -158,15 +165,27 @@ export function useTasks()
         }
     }
 
-    const deleteTag = async (tagId: number) => {
+    // Start tag delete dialog
+    const confirmDeleteTag = (id: number) =>
+    {
+        tagToDeleteId.value = id
+        showDeleteConfirmTag.value = true
+    }
+
+    // Delete tag
+    const deleteTag = async () =>
+        {
+        if (!tagToDeleteId.value) return
         try
         {
-            await $fetch(`/api/tags/${tagId}`, { method: 'DELETE' })
-            await refreshTags()
-            await refreshTasks()
-            if (selectedTagIds.value.includes(tagId))
+            await $fetch(`/api/tags/${tagToDeleteId.value}`, { method: 'DELETE' })
+            showDeleteConfirmTag.value = false
+            const deleted = tagToDeleteId.value
+            tagToDeleteId.value = null
+            await Promise.all([refreshTasks(), refreshTags()])
+            if (selectedTagIds.value.includes(deleted)) // clear filter if needed
             {
-                selectedTagIds.value = selectedTagIds.value.filter(id => id !== tagId)
+                selectedTagIds.value = selectedTagIds.value.filter(id => id !== deleted)
             }
         }
         catch (err)
@@ -206,18 +225,21 @@ export function useTasks()
         showToast,
         showCreateForm,
         showEditForm,
-        showDeleteConfirm,
+        showDeleteConfirmTask,
+        showDeleteConfirmTag,
         createInit,
         editInit,
         taskToEditId,
         taskToDeleteId,
+        tagToDeleteId,
         filteredTasks,
         refreshTasks,
         refreshTags,
         handleCreate,
         startEdit,
         handleEdit,
-        confirmDelete,
+        confirmDeleteTask,
+        confirmDeleteTag,
         deleteTask,
         deleteTag,
         toggleDone,

@@ -1,13 +1,13 @@
 <template>
   <div v-if="visible" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
     <div class="bg-gray-800 rounded-xl w-full max-w-sm p-6 relative">
-
       <!-- Pop-Up Text -->
       <h3 class="text-xl font-semibold mb-4 text-center">
         Are you sure?
       </h3>
       <p class="text-sm mb-6 text-center text-gray-300">
-        This will permanently delete the task.
+        <!-- Dynamic delete message -->
+        This will permanently delete the {{ props.mode === 'tag' ? 'tag' : 'task' }}.
       </p>
 
       <!-- Buttons -->
@@ -26,6 +26,10 @@
 </template>
 
 <script setup lang="ts">
-import { defineProps } from 'vue'
-const props = defineProps<{visible: boolean}>()
+import { withDefaults, defineProps } from 'vue'
+
+const props = withDefaults(
+  defineProps<{ visible: boolean; mode?: 'task' | 'tag' }>(),
+  { mode: 'task' }
+)
 </script>
