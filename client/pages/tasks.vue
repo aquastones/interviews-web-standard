@@ -27,11 +27,9 @@ const {
   deleteTask,
   toggleDone,
   toggleTagFilter,
+  selectedTagIds,
   deleteTag,
 } = useTasks()
-
-// alias for template
-const filterByTag = toggleTagFilter
 
 // load both tasks and tags on page load
 onMounted(async () =>
@@ -53,8 +51,9 @@ onMounted(async () =>
         <ul>
           <li v-for="tag in tags" :key="tag.id" class="flex justify-between items-center mb-2">
             <button
-              @click="filterByTag(tag.id)"
+              @click="toggleTagFilter(tag.id)"
               class="flex-1 text-left px-2 py-1 rounded-xl text-sm hover:opacity-80"
+              :class="{ 'filter grayscale opacity-50': selectedTagIds.length && !selectedTagIds.includes(tag.id) }"
               :style="{ backgroundColor: tag.color }">
               {{ tag.name }}
             </button>
