@@ -1,12 +1,34 @@
 # SOLUTION DOCUMENTATION
+## Desciption & Workflow
+The solution to the coding task is implemented within the api & client folders as well as within feature/api-setup & feature/client setup git branches. During frontend development additional branches (feature/api-fix#) were employed to perform small fixes and additions to the backend. PR to master followed by a rebase was used to get the client branch up to date with backend changes.
+
+### Backend
+All of the required endpoints were implemented in the api, basic validation, constraints and logging are also present.
+
+Additionally implemented features:
+- Task "Mark as done" flag & toggle endpoint
+- Tag color variable & hash-based assignment function
+- Space-separated multi-tag input from a string
+- DTO's created for all models to perform cleaner comminication with frontend
+
+### Frontend
+Built a lightweight webpage using Tailwindcss for quick styling. Hit most endpoints, but put emphasis on simplicity. Mainly: replaced manual tag creation and editing with a string input & automatic color assignment based on hash value of tag name (computed on the backend) and not used get task by id and get tag by id endpoints in the frontend yet (Possible to implement later if needed). The frontend is separated into several components for better readibility of the main page and possibility for reuse.
+
+Additionally implemented UI features:
+- Toast notification component, reused for all errors
+- TaskForm component, reused for both creating and editing a task
+- DeleteConfirm component, reused for confirming deletion of both tasks and tags
+
+## Deployment
 1. Clone the repo
-2. Run the backend in /api:
+2. Install dependencies (NUXT & Tailwind)
+3. Run the backend in /api:
 ```cmd
 dotnet run
 ```
-3. Run the frontend in /client:
+4. Run the frontend in /client:
 ```cmd
-npm run
+npm run dev
 ```
 
 ## HTTP ROUTES:
@@ -14,14 +36,16 @@ npm run
 
 ### **TasksController** (`[Route("api/tasks")]`)
 
-| Method | Route                  | Description                |
-| ------ | ---------------------- | -------------------------- |
-| GET    | `/api/tasks`           | Get all tasks              |
-| GET    | `/api/tasks/{id}`      | Get a specific task by ID  |
-| POST   | `/api/tasks`           | Create a new task          |
-| PUT    | `/api/tasks/{id}`      | Update an existing task    |
-| DELETE | `/api/tasks/{id}`      | Delete a task              |
-| POST   | `/api/tasks/{id}/tags` | Associate tags with a task |
+| Method | Route                           | Description                            |
+| ------ | ------------------------------- | -------------------------------------- |
+| GET    | `/api/tasks`                    | Get all tasks                          |
+| GET    | `/api/tasks/{id}`               | Get a specific task by ID (unused)     |
+| POST   | `/api/tasks`                    | Create a new task                      |
+| PUT    | `/api/tasks/{id}`               | Update an existing task                |
+| DELETE | `/api/tasks/{id}`               | Delete a task                          |
+| PATCH  | `/api/tasks/{id}/done`          | Toggle task Done/Undone                |
+| POST   | `/api/tasks/{id}/tags-single`   | Assign a single tag to a task (unused) |
+| POST   | `/api/tasks/{id}/tags-multiple` | Assign multiple tag to a task          |
 
 ---
 
@@ -30,13 +54,45 @@ npm run
 | Method | Route                  | Description                         |
 | ------ | ---------------------- | ----------------------------------- |
 | GET    | `/api/tags`            | Get all tags                        |
-| GET    | `/api/tags/{id}`       | Get a specific tag by ID            |
-| POST   | `/api/tags`            | Create a new tag                    |
-| PUT    | `/api/tags/{id}`       | Update a tag                        |
-| DELETE | `/api/tags/{id}`       | Delete a tag                        |
+| GET    | `/api/tags/{id}`       | Get a specific tag by ID (unused)   |
 | GET    | `/api/tags/{id}/tasks` | Get all tasks associated with a tag |
+| POST   | `/api/tags`            | Create a new tag (unused)           |
+| PUT    | `/api/tags/{id}`       | Update an existig tag (unused)      |
+| DELETE | `/api/tags/{id}`       | Delete a tag from db                |
 
 ---
+
+## Validation Rules
+
+### Task Model
+| Field        | Validation                               |
+|--------------|------------------------------------------|
+| Id           | Set automatically by db                  |
+| Name         | Required, Max length: 100                |
+| Description  | Optional, Max length: 500                |
+| Done         | Defaults to false                        |
+| DateCreated  | Automatically set (formatted DD/MM/YYYY) |
+
+### Tag Model
+| Field        | Validation                               |
+|--------------|------------------------------------------|
+| Name         | Required, Max length: 50                 |
+| Color        | Optional, Default: #cccccc             |
+|              | Max length: 7, Min length: 4             |
+
+### Other
+- Controllers enforce `ModelState.IsValid` checks before save.
+- API returns `400 Bad Request` with error details on validation failure.
+
+## Logging & Exceptions
+
+- All controllers use `ILogger<T>` for structured logging.
+- Logs use message templates for structured key-value output.
+
+| Level       | Description                                | Examples                                        |
+|-------------|--------------------------------------------|-------------------------------------------------|
+| Warning     | Resource not found or bad input            | Missing task/tag IDs, mismatched route/body IDs |
+| Error       | Uncaught exception during DB operations    | Failed saves, update errors, delete errors      |
 
 # (Task) Web Development Interview Test
 
