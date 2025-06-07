@@ -9,18 +9,15 @@
         <!-- Dynamic delete message -->
         This will permanently delete the {{ props.mode === 'tag' ? 'tag' : 'task' }}.
       </p>
-
       <!-- Buttons -->
       <div class="flex justify-around">
         <button @click="$emit('cancel')" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded-xl text-white">
           Cancel
         </button>
-
         <button @click="$emit('confirm')" class="px-4 py-2 bg-red-600 hover:bg-red-400 rounded-xl text-white">
           Yes, Delete
         </button>
       </div>
-
     </div>
   </div>
 </template>
