@@ -1,7 +1,9 @@
 # SOLUTION DOCUMENTATION
+
 <div align="center">
   <img src="preview.png"/>
 </div>
+
 ## Desciption & Workflow
 The solution to the coding task is implemented within the api & client folders as well as within feature/api-setup & feature/client setup git branches. During frontend development additional branches (feature/api-fix#) were employed to perform small fixes and additions to the backend. PR to master followed by a rebase was used to get the client branch up to date with backend changes.
 
