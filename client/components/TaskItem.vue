@@ -31,7 +31,12 @@
         </div>
       </div>
     </div>
-    <p class="text-sm text-gray-400" :class="{ 'line-through text-gray-500': task.done }" >{{ task.description }}</p>
+    <p class="text-sm text-gray-400" :class="{ 'line-through text-gray-500': task.done }">
+      {{ task.description }}
+    </p>
+    <p class="text-sm text-gray-500" :class="{ 'line-through text-gray-500': task.done }">
+      {{ task.dateCreated }}
+    </p>
     <TagList :tags="task.tags" />
   </div>
 </template>
