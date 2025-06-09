@@ -32,15 +32,22 @@ namespace api.Controllers
         [HttpPost]
         public async Task<ActionResult<TagDto>> CreateTag([FromBody] Tag tag)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState); // return 400
+            }
+
+            tag.Color = TagColorGenerator.Generate(tag.Name);
+
             _context.Tags.Add(tag);
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add tags to task.");
-                return StatusCode(500, "An error occurred while adding tags to a task.");
+                _logger.LogError(ex, "Failed to create a tag.");
+                return StatusCode(500, "An error occurred while creating a tag.");
             }
 
             var dto = MapToDto(tag);
@@ -106,6 +113,10 @@ namespace api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTag(int id, [FromBody] Tag tag)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState); // return error 400
+            }
             if (id != tag.Id)
             {
                 return BadRequest("ID mismatch");
@@ -119,7 +130,7 @@ namespace api.Controllers
             }
 
             existingTag.Name = tag.Name;
-            existingTag.Color = tag.Color;
+            existingTag.Color = TagColorGenerator.Generate(tag.Name);
 
             try
             {

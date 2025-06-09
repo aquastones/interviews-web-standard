@@ -5,6 +5,7 @@ import { useTasks } from '~/composables/useTasks'
 // Import components
 import Toast from '~/components/Toast.vue'
 import TaskForm from '~/components/TaskForm.vue'
+import TagForm from '~/components/TagForm.vue'
 import TaskList from '~/components/TaskList.vue'
 import DeleteConfirm from '~/components/DeleteConfirm.vue'
 import TagsSidebar from '~/components/TagsSidebar.vue'
@@ -16,17 +17,25 @@ const {
   filteredTasks,
   toastMessage,
   showToast,
-  showCreateForm,
-  showEditForm,
+  showCreateTaskForm,
+  showEditTaskForm,
+  showCreateTagForm,
+  showEditTagForm,
   showDeleteConfirmTask,
   showDeleteConfirmTag,
-  createInit,
-  editInit,
+  createTaskInit,
+  editTaskInit,
+  createTagInit,
+  editTagInit,
   refreshTasks,
   refreshTags,
-  handleCreate,
-  handleEdit,
-  startEdit,
+  handleCreateTask,
+  handleEditTask,
+  startEditTask,
+  startCreateTag,
+  handleCreateTag,
+  handleEditTag,
+  startEditTag,
   confirmDeleteTask,
   confirmDeleteTag,
   deleteTask,
@@ -55,6 +64,8 @@ onMounted(async () =>
         :selectedTagIds="selectedTagIds"
         @filter-tag="toggleTagFilter"
         @delete-tag="confirmDeleteTag"
+        @create-tag="startCreateTag"
+        @edit-tag="startEditTag"
       />
 
       <main class="flex-1 space-y-8">
@@ -62,14 +73,14 @@ onMounted(async () =>
         <Header
           title="Tasks"
           buttonLabel="+ New Task"
-          @action="showCreateForm = true"
+          @action="showCreateTaskForm = true"
         />
 
         <!-- Task list -->
         <TaskList
           :tasks="filteredTasks"
           @toggle-done="toggleDone"
-          @edit="startEdit"
+          @edit="startEditTask"
           @request-delete="confirmDeleteTask"
         />
 
@@ -79,27 +90,27 @@ onMounted(async () =>
           message="No tasks found."
         />
 
-        <!-- Create Form -->
+        <!-- Create Task Form -->
         <TaskForm
           mode="create"
-          :visible="showCreateForm"
-          :initialName="createInit.name"
-          :initialDescription="createInit.description"
-          :initialTags="createInit.tags"
-          @submit="handleCreate"
-          @cancel="showCreateForm = false"
+          :visible="showCreateTaskForm"
+          :initialName="createTaskInit.name"
+          :initialDescription="createTaskInit.description"
+          :initialTags="createTaskInit.tags"
+          @submit="handleCreateTask"
+          @cancel="showCreateTaskForm = false"
           @error="msg => { toastMessage = msg; showToast = true }"
         />
 
-        <!-- Edit Form -->
+        <!-- Edit Task Form -->
         <TaskForm
           mode="edit"
-          :visible="showEditForm"
-          :initialName="editInit.name"
-          :initialDescription="editInit.description"
-          :initialTags="editInit.tags"
-          @submit="handleEdit"
-          @cancel="showEditForm = false"
+          :visible="showEditTaskForm"
+          :initialName="editTaskInit.name"
+          :initialDescription="editTaskInit.description"
+          :initialTags="editTaskInit.tags"
+          @submit="handleEditTask"
+          @cancel="showEditTaskForm = false"
           @error="msg => { toastMessage = msg; showToast = true }"
         />
 
@@ -109,6 +120,26 @@ onMounted(async () =>
           mode="task"
           @confirm="deleteTask"
           @cancel="showDeleteConfirmTask = false"
+        />
+
+        <!-- Create Tag Form -->
+        <TagForm
+          mode="create"
+          :visible="showCreateTagForm"
+          :initialName="createTagInit.name"
+          @submit="handleCreateTag"
+          @cancel="showCreateTagForm = false"
+          @error="msg => { toastMessage = msg; showToast = true }"
+        />
+
+        <!-- Edit Tag Form -->
+        <TagForm
+          mode="edit"
+          :visible="showEditTagForm"
+          :initialName="editTagInit.name"
+          @submit="handleEditTag"
+          @cancel="showEditTagForm = false"
+          @error="msg => { toastMessage = msg; showToast = true }"
         />
 
         <!-- Delete Confirmation for Tags -->

@@ -24,18 +24,28 @@ export function useTasks()
     const tags = ref<Tag[]>([]) // Tags array
     const toastMessage = ref('') // Toast message
 
-    const createInit = { name: '', description: '', tags: '' } // Init values for a create form
-    const editInit = ref({ name: '', description: '', tags: '' }) // Init values for an edit form
+    const createTaskInit = { name: '', description: '', tags: '' } // Init values for a task create form
+    const editTaskInit = ref({ name: '', description: '', tags: '' }) // Init values for a task edit form
+
+    const createTagInit = { name: '' } // Init values for a tag create form
+    const editTagInit = ref({ name: '' }) // Init values for a tag edit form
 
     const showToast = ref(false) // Toast visibility
-    const showCreateForm = ref(false) // Create form visibility
-    const showEditForm = ref(false) // Edit form visibility
+
+    const showCreateTaskForm = ref(false) // Create form visibility
+    const showEditTaskForm = ref(false) // Edit form visibility
+    const showCreateTagForm = ref(false) // Create form visibility
+    const showEditTagForm = ref(false) // Edit form visibility
+
     const showDeleteConfirmTask = ref(false) // Delete confirmation visibility for tasks
     const showDeleteConfirmTag = ref(false) // Delete confirmation visibility for tags
 
     const taskToEditId = ref<number | null>(null) // Edit task id
     const taskToDeleteId = ref<number | null>(null) // Delete task id
+
+    const tagToEditId = ref<number | null>(null) // Edit tag id
     const tagToDeleteId = ref<number | null>(null) // Delete tag id
+
     const selectedTagIds = ref<number[]>([]) // Filter by tags ids
 
     // Functions
@@ -92,12 +102,12 @@ export function useTasks()
     }
 
     // Create task on the backend
-    const handleCreate = async (payload: { name: string; description: string; tags: string }) => {
+    const handleCreateTask = async (payload: { name: string; description: string; tags: string }) => {
         try
         {
             const newTask = await $fetch<Task>('/api/tasks', {method: 'POST',body: { name: payload.name, description: payload.description },})
             await $fetch(`/api/tasks/${newTask.id}/tags-multiple`, {method: 'POST',body: { tagString: payload.tags },})
-            showCreateForm.value = false
+            showCreateTaskForm.value = false
             await refreshTags()
             await refreshTasks()
         }
@@ -110,27 +120,27 @@ export function useTasks()
     }
 
     // Init edit task
-    const startEdit = (task: Task) =>
+    const startEditTask = (task: Task) =>
     {
         taskToEditId.value = task.id
-        editInit.value =
+        editTaskInit.value =
         {
             name: task.name,
             description: task.description || '',
             tags: task.tags.map(t => t.name).join(' '),
         }
-        showEditForm.value = true
+        showEditTaskForm.value = true
     }
 
     // Save task edit changes
-    const handleEdit = async (payload: { name: string; description: string; tags: string }) =>
+    const handleEditTask = async (payload: { name: string; description: string; tags: string }) =>
     {
         if (!taskToEditId.value) return
         try
         {
             await $fetch(`/api/tasks/${taskToEditId.value}`,{method: 'PUT', body: {id: taskToEditId.value, name: payload.name, description: payload.description},})
             await $fetch(`/api/tasks/${taskToEditId.value}/tags-multiple`, {method: 'POST', body: {tagString: payload.tags},})
-            showEditForm.value = false
+            showEditTaskForm.value = false
             taskToEditId.value = null
             await refreshTags()
             await refreshTasks()
@@ -168,6 +178,57 @@ export function useTasks()
             toastMessage.value = 'Error deleting task'
             showToast.value = true
         }
+    }
+
+    // Start creating a tag
+    const startCreateTag = () =>
+    {
+      createTagInit.name = ''
+      showCreateTagForm.value = true
+    }
+
+    // Create a new tag
+    const handleCreateTag = async (payload: { name: string }) =>
+    {
+      try
+      {
+        await $fetch<Tag>('/api/tags', {method: 'POST', body: { name: payload.name },})
+        showCreateTagForm.value = false
+        await Promise.all([refreshTasks(), refreshTags()])
+      }
+      catch (err)
+      {
+        console.error(err)
+        toastMessage.value = 'Error creating tag'
+        showToast.value = true
+      }
+    }
+
+    // Start editing a tag
+    const startEditTag = (tag: Tag) =>
+    {
+      tagToEditId.value = tag.id
+      editTagInit.value = { name: tag.name }
+      showEditTagForm.value = true
+    }
+
+    // Save tag edits
+    const handleEditTag = async (payload: { name: string }) =>
+    {
+      if (!tagToEditId.value) return
+      try
+      {
+        await $fetch(`/api/tags/${tagToEditId.value}`, {method: 'PUT', body: { id: tagToEditId.value, name: payload.name },})
+        showEditTagForm.value = false
+        tagToEditId.value = null
+        await Promise.all([refreshTasks(), refreshTags()])
+      }
+      catch (err)
+      {
+        console.error(err)
+        toastMessage.value = 'Error updating tag'
+        showToast.value = true
+      }
     }
 
     // Start tag delete dialog
@@ -228,21 +289,29 @@ export function useTasks()
         selectedTagIds,
         toastMessage,
         showToast,
-        showCreateForm,
-        showEditForm,
+        showCreateTaskForm,
+        showEditTaskForm,
+        showCreateTagForm,
+        showEditTagForm,
         showDeleteConfirmTask,
         showDeleteConfirmTag,
-        createInit,
-        editInit,
+        createTaskInit,
+        editTaskInit,
+        createTagInit,
+        editTagInit,
         taskToEditId,
         taskToDeleteId,
         tagToDeleteId,
         filteredTasks,
         refreshTasks,
         refreshTags,
-        handleCreate,
-        startEdit,
-        handleEdit,
+        handleCreateTask,
+        startEditTask,
+        handleEditTask,
+        startCreateTag,
+        handleCreateTag,
+        startEditTag,
+        handleEditTag,
         confirmDeleteTask,
         confirmDeleteTag,
         deleteTask,

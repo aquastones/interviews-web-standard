@@ -36,31 +36,9 @@ namespace api.Controllers
             }).ToList()
         };
 
-        // Color palette for tags
-        private static readonly string[] TagColors = new[]
-        {
-            "#3E5641", // Hunter Green
-            "#DD6E42", // Burnt Sienna Orange
-            "#59A96A", // Jade Green
-            "#FFC43D", // Amber Yellow
-            "#5F4BB6", // Iris Blue
-            "#5DD9C1", // Turquoise
-            "#F97068", // Bittersweet Red
-            "#E9D758", // Arylide Yellow
-            "#665687", // Ultra Violet
-            "#8E518D", // Plum Purple
-        };
-
-        // Hash function for color selection
-        private string HashToColor(string input)
-        {
-            int hash = input.ToLowerInvariant().Aggregate(0, (acc, c) => acc + c);
-            return TagColors[hash % TagColors.Length];
-        }
-
         // CREATE TASK
         [HttpPost]
-        public async Task<ActionResult<Models.Task>> CreateTask([FromBody] Models.Task task)
+        public async Task<ActionResult<TaskDto>> CreateTask([FromBody] Models.Task task)
         {
             if (!ModelState.IsValid)
             {
@@ -251,8 +229,6 @@ namespace api.Controllers
         {
             var tagString = dto.TagString;
 
-            var random = new Random();
-
             var task = await _context.Tasks
                 .Include(t => t.TaskTags)
                 .FirstOrDefaultAsync(t => t.Id == id);
@@ -280,7 +256,7 @@ namespace api.Controllers
                 .Select(name => new Tag
                 {
                     Name = name,
-                    Color = HashToColor(name)
+                    Color = TagColorGenerator.Generate(name)
                 }).ToList();
 
             _context.Tags.AddRange(newTags);
