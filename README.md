@@ -17,11 +17,12 @@ Additionally implemented features:
 - DTO's created for all models to perform cleaner comminication with frontend
 
 ### Frontend
-Built a lightweight webpage using Tailwindcss for quick styling. Hit most endpoints, but put emphasis on simplicity. Mainly: replaced manual tag creation and editing with a string input & automatic color assignment based on hash value of tag name (computed on the backend) and not used get task by id and get tag by id endpoints in the frontend yet (Possible to implement later if needed). The frontend is separated into several components for better readibility of the main page and possibility for reuse.
+Used Tailwindcss for quick styling. Hit all api endpoints except for "get task by id" and "get tag by id" mainly for design simplicity, easy to implement if needed. The "POST {id}/tags-single" endpoint is obsolete since it has been replaced with a string input feature (POST {id}/tags-multiple), kept in api for flexibility but never used in the frontend. Apart from that, every endpoint has both a logical and a structural place in the app. The frontend is separated into several components for better code readability and possibility for component reuse. All typescript logic is handled in the "useTasks.ts" composable.
 
-Additionally implemented UI features:
-- Toast notification component, reused for all errors
-- TaskForm component, reused for both creating and editing a task
+Components that have several responsibilities across the app:
+- Toast notification component, reused for all errors for in-app error display
+- TaskForm component, reused for both creating and editing tasks
+- TagForm component, reused for both creating and editing tags
 - DeleteConfirm component, reused for confirming deletion of both tasks and tags
 
 ## Deployment
@@ -61,8 +62,8 @@ npm run dev
 | GET    | `/api/tags`            | Get all tags                        |
 | GET    | `/api/tags/{id}`       | Get a specific tag by ID (unused)   |
 | GET    | `/api/tags/{id}/tasks` | Get all tasks associated with a tag |
-| POST   | `/api/tags`            | Create a new tag (unused)           |
-| PUT    | `/api/tags/{id}`       | Update an existig tag (unused)      |
+| POST   | `/api/tags`            | Create a new tag                    |
+| PUT    | `/api/tags/{id}`       | Update an existig tag               |
 | DELETE | `/api/tags/{id}`       | Delete a tag from db                |
 
 ---
@@ -73,16 +74,16 @@ npm run dev
 | Field        | Validation                               |
 |--------------|------------------------------------------|
 | Id           | Set automatically by db                  |
-| Name         | Required, Max length: 100                |
-| Description  | Optional, Max length: 500                |
+| Name         | Required, Max length: 50                 |
+| Description  | Optional, Max length: 100                |
 | Done         | Defaults to false                        |
 | DateCreated  | Automatically set (formatted DD/MM/YYYY) |
 
 ### Tag Model
 | Field        | Validation                               |
 |--------------|------------------------------------------|
-| Name         | Required, Max length: 50                 |
-| Color        | Optional, Default: #cccccc             |
+| Name         | Required, Max length: 25                 |
+| Color        | Optional, Default: #cccccc               |
 |              | Max length: 7, Min length: 4             |
 
 ### Other
