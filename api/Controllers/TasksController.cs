@@ -6,28 +6,43 @@ using api.Models;
 
 namespace api.Controllers
 {
+    /// <summary>
+    /// API controller for managing task entities and their associations with tags.
+    /// Provides CRUD operations, tag assignments, and "done" status toggling.
+    /// </summary>
     [ApiController]
     [Route("api/tasks")]
     public class TasksController : ControllerBase
     {
-        // Map to context
+        // EF Core database context for tasks and related entities
         private readonly ProgramDbContext _context;
+
+        // Logger for recording events, warnings, and errors
         private readonly ILogger<TasksController> _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TasksController"/> class.
+        /// </summary>
+        /// <param name="context">Database context.</param>
+        /// <param name="logger">Logger for this controller.</param>
         public TasksController(ProgramDbContext context, ILogger<TasksController> logger)
         {
             _context = context;
             _logger = logger;
         }
 
-        // Helper to map Task -> Dto
+        /// <summary>
+        /// Maps a Task entity to a TaskDto.
+        /// </summary>
+        /// <param name="task">Task entity.</param>
+        /// <returns>Mapped TaskDto object.</returns>
         private TaskDto MapToDto(Models.Task task) => new TaskDto
         {
             Id = task.Id,
             Name = task.Name,
             Description = task.Description,
             Done = task.Done,
-            DateCreated = task.DateCreated.ToString("dd/MM/yyyy"), // Date formatting
+            DateCreated = task.DateCreated.ToString("dd/MM/yyyy"),
             Tags = task.TaskTags.Select(tt => new TagDto
             {
                 Id = tt.Tag.Id,
@@ -36,50 +51,59 @@ namespace api.Controllers
             }).ToList()
         };
 
-        // CREATE TASK
+        /// <summary>
+        /// Creates a new task.
+        /// </summary>
+        /// <param name="task">Task object from the request body.</param>
+        /// <returns>Created task DTO on success; <c>400</c> for invalid data; <c>500</c> for DB errors.</returns>
         [HttpPost]
         public async Task<ActionResult<TaskDto>> CreateTask([FromBody] Models.Task task)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState); // return error 400
+                return BadRequest(ModelState);
             }
 
-            _context.Tasks.Add(task); // Add new task to db
+            _context.Tasks.Add(task);
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create task.");
+                _logger.LogError(ex, "Failed to create task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while creating a task.");
             }
 
-            // return 201 created with link to dto
             var dto = MapToDto(task);
             return CreatedAtAction(nameof(GetTask), new { id = task.Id }, dto);
         }
 
-        // READ ALL TASKS
+        /// <summary>
+        /// Retrieves all tasks with their associated tags.
+        /// </summary>
+        /// <returns>List of all task DTOs.</returns>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Models.Task>>> GetAllTasks()
+        public async Task<ActionResult<IEnumerable<TaskDto>>> GetAllTasks()
         {
-            // Load all tasks & their tags
             var tasks = await _context.Tasks
                 .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
                 .ToListAsync();
 
             var tasksDtos = tasks.Select(MapToDto).ToList();
-            return Ok(tasksDtos); // return 200
+            return Ok(tasksDtos);
         }
 
-        // READ TASK (by id)
+        /// <summary>
+        /// Retrieves a task by its ID.
+        /// Logs a warning if the task is not found.
+        /// </summary>
+        /// <param name="id">Task ID.</param>
+        /// <returns>Task DTO on success, or <c>404</c> if not found.</returns>
         [HttpGet("{id}")]
-        public async Task<ActionResult<Models.Task>> GetTask(int id)
+        public async Task<ActionResult<TaskDto>> GetTask(int id)
         {
-            // Find a task by id & include its tags
             var task = await _context.Tasks
                 .Include(t => t.TaskTags)
                 .ThenInclude(tt => tt.Tag)
@@ -87,26 +111,32 @@ namespace api.Controllers
 
             if (task == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
+                return NotFound();
             }
 
             var dto = MapToDto(task);
-            return Ok(dto); // return 200
+            return Ok(dto);
         }
 
-        // UPDATE TASK
+        /// <summary>
+        /// Updates a task by its ID.
+        /// Logs a warning if not found, or error if update fails.
+        /// </summary>
+        /// <param name="id">Task ID from the route.</param>
+        /// <param name="updatedTask">Updated Task object from the body.</param>
+        /// <returns><c>NoContent</c> on success; <c>400</c> for bad request; <c>404</c> if not found; <c>500</c> for DB errors.</returns>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(int id, [FromBody] Models.Task updatedTask)
         {
             if (id != updatedTask.Id)
             {
-                return BadRequest("Task ID mismatch"); // handle mismatching ids
+                return BadRequest("Task ID mismatch");
             }
 
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState); // handle invalid model state
+                return BadRequest(ModelState);
             }
 
             var existingTask = await _context.Tasks
@@ -115,8 +145,8 @@ namespace api.Controllers
 
             if (existingTask == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
+                return NotFound();
             }
 
             existingTask.Name = updatedTask.Name;
@@ -124,18 +154,23 @@ namespace api.Controllers
 
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update task.");
+                _logger.LogError(ex, "Failed to update task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while updating a task.");
             }
 
-            return NoContent(); // return 204 when updated
+            return NoContent();
         }
 
-        // DELETE TASK
+        /// <summary>
+        /// Deletes a task by its ID.
+        /// Logs a warning if not found, or error if delete fails.
+        /// </summary>
+        /// <param name="id">Task ID.</param>
+        /// <returns><c>NoContent</c> on success; <c>404</c> if not found; <c>500</c> for DB errors.</returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTask(int id)
         {
@@ -143,25 +178,30 @@ namespace api.Controllers
 
             if (task == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
+                return NotFound();
             }
 
             _context.Tasks.Remove(task);
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete task.");
+                _logger.LogError(ex, "Failed to delete task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while deleting a task.");
             }
 
-            return NoContent(); // return 204 when deleted
+            return NoContent();
         }
 
-        // MARK AS DONE/UNDONE
+        /// <summary>
+        /// Toggles a task's "done" status (done/undone).
+        /// Logs a warning if not found, or error if DB fails.
+        /// </summary>
+        /// <param name="id">Task ID.</param>
+        /// <returns>Task ID and new Done status on success; <c>404</c> if not found; <c>500</c> for errors.</returns>
         [HttpPatch("{id}/done")]
         public async Task<IActionResult> ToggleTaskDone(int id)
         {
@@ -169,25 +209,30 @@ namespace api.Controllers
 
             if (task == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
+                return NotFound();
             }
 
             task.Done = !task.Done;
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to toggle task done.");
+                _logger.LogError(ex, "Failed to toggle task done."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while marking the task done/undone.");
             }
 
-            return Ok(new { task.Id, task.Done }); // return 200
+            return Ok(new { task.Id, task.Done });
         }
 
-        // ASSIGN TAG TO TASK
+        /// <summary>
+        /// Assigns tags to a task, replacing any existing tags.
+        /// </summary>
+        /// <param name="id">Task ID.</param>
+        /// <param name="tagIds">List of tag IDs to assign.</param>
+        /// <returns>Task ID and assigned tag IDs; <c>404</c> if not found; <c>500</c> for errors.</returns>
         [HttpPost("{id}/tags-single")]
         public async Task<IActionResult> AddTagsToTask(int id, [FromBody] List<int> tagIds)
         {
@@ -197,8 +242,8 @@ namespace api.Controllers
 
             if (task == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
+                return NotFound();
             }
 
             // Remove existing TaskTag relationships
@@ -212,18 +257,23 @@ namespace api.Controllers
 
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add tag task.");
+                _logger.LogError(ex, "Failed to add tag to task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while adding a tag to a task.");
             }
 
-            return Ok(new { TaskId = id, TagIds = tagIds }); // return 200
+            return Ok(new { TaskId = id, TagIds = tagIds });
         }
 
-        // ASSIGN MULTIPLE TAGS TO TASK AT ONCE
+        /// <summary>
+        /// Assigns tags to a task using a string of tag names. Creates new tags if needed.
+        /// </summary>
+        /// <param name="id">Task ID.</param>
+        /// <param name="dto">TagStringDto containing space-separated tag names.</param>
+        /// <returns>Task ID and assigned tag names; <c>404</c> if not found; <c>500</c> for errors.</returns>
         [HttpPost("{id}/tags-multiple")]
         public async Task<IActionResult> AddTagsFromString(int id, [FromBody] TagStringDto dto)
         {
@@ -235,7 +285,7 @@ namespace api.Controllers
 
             if (task == null)
             {
-                _logger.LogWarning("Task with ID {Id} not found.", id);
+                _logger.LogWarning("Task with ID {Id} not found.", id); // Logs warning on missing task
                 return NotFound();
             }
 
@@ -262,11 +312,11 @@ namespace api.Controllers
             _context.Tags.AddRange(newTags);
             try
             {
-                await _context.SaveChangesAsync(); // Save new tags (to get ids)
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add tags to task.");
+                _logger.LogError(ex, "Failed to add tags to task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while adding tags to a task.");
             }
 
@@ -281,15 +331,15 @@ namespace api.Controllers
 
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to add tags to task.");
+                _logger.LogError(ex, "Failed to add tags to task."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while adding tags to a task.");
             }
 
-            return Ok(new { TaskId = id, Tags = allTags.Select(t => t.Name).ToList() }); // return 200
+            return Ok(new { TaskId = id, Tags = allTags.Select(t => t.Name).ToList() });
         }
     }
 }

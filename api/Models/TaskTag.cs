@@ -1,11 +1,28 @@
 ﻿namespace api.Models
 {
+    /// <summary>
+    /// Association (join) entity connecting tasks and tags (many-to-many relationship).
+    /// </summary>
     public class TaskTag
     {
+        /// <summary>
+        /// The task ID in the relationship.
+        /// </summary>
         public int TaskId { get; set; }
-        public Task Task { get; set; } = null!; // = null! to suppress warnings
 
+        /// <summary>
+        /// The related task entity.
+        /// </summary>
+        public Task Task { get; set; } = null!;
+
+        /// <summary>
+        /// The tag ID in the relationship.
+        /// </summary>
         public int TagId { get; set; }
-        public Tag Tag { get; set; } = null!; // = null! to suppress warnings
+
+        /// <summary>
+        /// The related tag entity.
+        /// </summary>
+        public Tag Tag { get; set; } = null!;
     }
 }

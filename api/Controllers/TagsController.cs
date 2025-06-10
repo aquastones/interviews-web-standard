@@ -6,21 +6,36 @@ using api.Models;
 
 namespace api.Controllers
 {
+    /// <summary>
+    /// API controller for managing tag entities and their associations with tasks.
+    /// Provides CRUD operations and tag-to-task queries.
+    /// </summary>
     [ApiController]
     [Route("api/tags")]
     public class TagsController : ControllerBase
     {
-        // Map to context
+        // EF Core database context for tags and related entities
         private readonly ProgramDbContext _context;
+
+        // Logger for recording events, warnings, and errors
         private readonly ILogger<TagsController> _logger;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="TagsController"/> class.
+        /// </summary>
+        /// <param name="context">Database context.</param>
+        /// <param name="logger">Logger instance for this controller.</param>
         public TagsController(ProgramDbContext context, ILogger<TagsController> logger)
         {
             _context = context;
             _logger = logger;
         }
 
-        // Helper to map Tag -> Dto
+        /// <summary>
+        /// Maps a Tag entity to its corresponding DTO.
+        /// </summary>
+        /// <param name="tag">Tag entity to map.</param>
+        /// <returns>TagDto representing the tag.</returns>
         private TagDto MapToDto(Tag tag) => new TagDto
         {
             Id = tag.Id,
@@ -28,15 +43,20 @@ namespace api.Controllers
             Color = tag.Color
         };
 
-        // CREATE TAG
+        /// <summary>
+        /// Creates a new tag.
+        /// </summary>
+        /// <param name="tag">Tag object from the request body.</param>
+        /// <returns>Created tag DTO on success; <c>400</c> for invalid data; <c>500</c> for errors.</returns>
         [HttpPost]
         public async Task<ActionResult<TagDto>> CreateTag([FromBody] Tag tag)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState); // return 400
+                return BadRequest(ModelState);
             }
 
+            // Automatically generate a color based on the tag name
             tag.Color = TagColorGenerator.Generate(tag.Name);
 
             _context.Tags.Add(tag);
@@ -46,7 +66,7 @@ namespace api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to create a tag.");
+                _logger.LogError(ex, "Failed to create a tag."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while creating a tag.");
             }
 
@@ -54,7 +74,10 @@ namespace api.Controllers
             return CreatedAtAction(nameof(GetTagById), new { id = tag.Id }, dto);
         }
 
-        // READ ALL TAGS
+        /// <summary>
+        /// Retrieves all tags.
+        /// </summary>
+        /// <returns>List of tag DTOs.</returns>
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TagDto>>> GetTags()
         {
@@ -62,7 +85,12 @@ namespace api.Controllers
             return Ok(tags.Select(MapToDto).ToList());
         }
 
-        // READ TAG BY ID
+        /// <summary>
+        /// Retrieves a tag by its ID.
+        /// Logs a warning if the tag is not found.
+        /// </summary>
+        /// <param name="id">Tag ID.</param>
+        /// <returns>Tag DTO on success, or <c>404</c> if tag not found.</returns>
         [HttpGet("{id}")]
         public async Task<ActionResult<TagDto>> GetTagById(int id)
         {
@@ -70,14 +98,19 @@ namespace api.Controllers
 
             if (tag == null)
             {
-                _logger.LogWarning("Tag with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Tag with ID {Id} not found.", id); // Logs warning on missing tag
+                return NotFound();
             }
 
-            return Ok(MapToDto(tag)); // return 200
+            return Ok(MapToDto(tag));
         }
 
-        // GET TASKS FOR A TAG
+        /// <summary>
+        /// Retrieves all tasks associated with a specific tag by tag ID.
+        /// Logs a warning if the tag is not found.
+        /// </summary>
+        /// <param name="id">Tag ID.</param>
+        /// <returns>List of associated task DTOs on success; <c>404</c> if tag not found.</returns>
         [HttpGet("{id}/tasks")]
         public async Task<ActionResult<IEnumerable<TaskDto>>> GetTasksForTag(int id)
         {
@@ -90,8 +123,8 @@ namespace api.Controllers
 
             if (tag == null)
             {
-                _logger.LogWarning("Tag with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Tag with ID {Id} not found.", id); // Logs warning on missing tag
+                return NotFound();
             }
 
             var tasks = tag.TaskTags.Select(tt => tt.Task).Distinct().Select(t => new TaskDto
@@ -109,13 +142,19 @@ namespace api.Controllers
             return Ok(tasks);
         }
 
-        // UPDATE TAG
+        /// <summary>
+        /// Updates a tag by ID.
+        /// Logs a warning if tag not found, or error if update fails.
+        /// </summary>
+        /// <param name="id">Tag ID from the route.</param>
+        /// <param name="tag">Updated tag object from the body.</param>
+        /// <returns><c>NoContent</c> on success; <c>400</c> for bad request; <c>404</c> if tag not found; <c>500</c> for errors.</returns>
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTag(int id, [FromBody] Tag tag)
         {
             if (!ModelState.IsValid)
             {
-                return BadRequest(ModelState); // return error 400
+                return BadRequest(ModelState);
             }
             if (id != tag.Id)
             {
@@ -125,8 +164,8 @@ namespace api.Controllers
             var existingTag = await _context.Tags.FindAsync(id);
             if (existingTag == null)
             {
-                _logger.LogWarning("Tag with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Tag with ID {Id} not found.", id); // Logs warning on missing tag
+                return NotFound();
             }
 
             existingTag.Name = tag.Name;
@@ -134,19 +173,23 @@ namespace api.Controllers
 
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to update tag.");
+                _logger.LogError(ex, "Failed to update tag."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while updating a tag.");
             }
 
-            return NoContent(); // return 204 when updated
+            return NoContent();
         }
 
-
-        // DELETE TAG
+        /// <summary>
+        /// Deletes a tag by ID.
+        /// Logs a warning if tag not found, or error if delete fails.
+        /// </summary>
+        /// <param name="id">Tag ID.</param>
+        /// <returns><c>NoContent</c> on success; <c>404</c> if tag not found; <c>500</c> for errors.</returns>
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTag(int id)
         {
@@ -154,22 +197,22 @@ namespace api.Controllers
 
             if (tag == null)
             {
-                _logger.LogWarning("Tag with ID {Id} not found.", id);
-                return NotFound(); // return error 404
+                _logger.LogWarning("Tag with ID {Id} not found.", id); // Logs warning on missing tag
+                return NotFound();
             }
 
             _context.Tags.Remove(tag);
             try
             {
-                await _context.SaveChangesAsync(); // Save changes to db
+                await _context.SaveChangesAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to delete tag.");
+                _logger.LogError(ex, "Failed to delete tag."); // Logs error if DB fails
                 return StatusCode(500, "An error occurred while deleting a tag.");
             }
 
-            return NoContent(); // return 204
+            return NoContent();
         }
     }
 }
