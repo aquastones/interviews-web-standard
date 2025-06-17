@@ -7,6 +7,7 @@
 <script setup lang="ts">
 import { defineProps } from 'vue'
 
+// Inputs: Message and visibility state
 const props = defineProps<{
   message: string
   visible: boolean

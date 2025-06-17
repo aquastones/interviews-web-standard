@@ -13,26 +13,12 @@
 <script setup lang="ts">
 import { defineProps, defineEmits } from 'vue'
 import TaskItem from '~/components/TaskItem.vue'
+import type { Task } from '~/composables/useTasks'
 
-interface Tag
-{
-  id: number
-  name: string
-  color: string
-}
-
-interface Task
-{
-  id: number
-  name: string
-  description?: string
-  done: boolean
-  dateCreated: string
-  tags: Tag[]
-}
-
+// Input: Task list
 const props = defineProps<{tasks: Task[]}>()
 
+// Output: Button functions
 const emit = defineEmits<{
   (e: 'toggle-done', taskId: number): void
   (e: 'edit', task: Task): void

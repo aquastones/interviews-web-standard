@@ -43,23 +43,11 @@
 
 <script setup lang="ts">
 import { defineProps, ref } from 'vue'
+import type { Task } from '~/composables/useTasks'
 
-interface Tag
-{
-  id: number
-  name: string
-  color: string
-}
-interface Task
-{
-  id: number
-  name: string
-  description?: string
-  done: boolean
-  dateCreated: string
-  tags: Tag[]
-}
-
-const props = defineProps<{task: Task}>()
+// Button menu collapse flag
 const open = ref(false)
+
+// Input: task object
+const props = defineProps<{task: Task}>()
 </script>

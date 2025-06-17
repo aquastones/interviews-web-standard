@@ -31,14 +31,15 @@
 
 <script setup lang="ts">
 import { ref, defineProps, defineEmits } from 'vue'
+import type { Tag } from '~/composables/useTasks'
 
-interface Tag { id: number; name: string; color: string }
-
+// Input: Tag item & selected tags for filtering
 const props = defineProps<{
   tag: Tag
   selectedTagIds: number[]
 }>()
 
+// Output: Button actions
 const emit = defineEmits<{
   (e: 'filter-tag', tagId: number): void
   (e: 'edit-tag', tag: Tag): void

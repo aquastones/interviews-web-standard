@@ -8,11 +8,8 @@
 
 <script setup lang="ts">
 import { defineProps } from 'vue'
-interface Tag
-{
-  id: number
-  name: string
-  color: string
-}
+import type { Task, Tag } from '~/composables/useTasks'
+
+// Input: Tags list
 const props = defineProps<{tags: Tag[]}>()
 </script>

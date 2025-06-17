@@ -1,7 +1,10 @@
 import { ref, computed, onMounted } from 'vue'
 
+// -----------------
 // Interfaces
-interface Task
+// -----------------
+
+export interface Task
 {
     id: number
     name: string
@@ -10,7 +13,7 @@ interface Task
     dateCreated: string
     tags: Tag[]
 }
-interface Tag
+export interface Tag
 {
     id: number
     name: string
@@ -19,37 +22,42 @@ interface Tag
 
 export function useTasks()
 {
+    // -----------------
     // Variables
+    // -----------------
+
     const tasks = ref<Task[]>([]) // Tasks array
     const tags = ref<Tag[]>([]) // Tags array
+
     const toastMessage = ref('') // Toast message
 
     const createTaskInit = { name: '', description: '', tags: '' } // Init values for a task create form
     const editTaskInit = ref({ name: '', description: '', tags: '' }) // Init values for a task edit form
-
     const createTagInit = { name: '' } // Init values for a tag create form
     const editTagInit = ref({ name: '' }) // Init values for a tag edit form
 
     const showToast = ref(false) // Toast visibility
 
-    const showCreateTaskForm = ref(false) // Create form visibility
-    const showEditTaskForm = ref(false) // Edit form visibility
-    const showCreateTagForm = ref(false) // Create form visibility
-    const showEditTagForm = ref(false) // Edit form visibility
+    const showCreateTaskForm = ref(false) // Create task form visibility
+    const showEditTaskForm = ref(false) // Edit task form visibility
+    const showCreateTagForm = ref(false) // Create tag form visibility
+    const showEditTagForm = ref(false) // Edit tag form visibility
 
     const showDeleteConfirmTask = ref(false) // Delete confirmation visibility for tasks
     const showDeleteConfirmTag = ref(false) // Delete confirmation visibility for tags
 
     const taskToEditId = ref<number | null>(null) // Edit task id
     const taskToDeleteId = ref<number | null>(null) // Delete task id
-
     const tagToEditId = ref<number | null>(null) // Edit tag id
     const tagToDeleteId = ref<number | null>(null) // Delete tag id
 
-    const selectedTagIds = ref<number[]>([]) // Filter by tags ids
+    const selectedTagIds = ref<number[]>([]) // Tag ids for filtering
 
+    // -----------------
     // Functions
-    // Toggle which tags are active filters
+    // -----------------
+
+    // Toggle a tag as an active filter
     const toggleTagFilter = (tagId: number) =>
     {
         const idx = selectedTagIds.value.indexOf(tagId)
@@ -57,18 +65,13 @@ export function useTasks()
         else selectedTagIds.value.splice(idx, 1)
     }
 
-    // Filter tags
+    // Tasks filtered by the selected tags
     const filteredTasks = computed(() =>
     {
         if (!selectedTagIds.value.length) return tasks.value
-
         return tasks.value.filter(task =>
-            selectedTagIds.value.every
-            (
-            tagId =>
-            task.tags.some(t => t.id === tagId)
-            )
-        )
+            selectedTagIds.value.every(tagId =>
+                task.tags.some(t => t.id === tagId)))
     })
 
     // Fetch tasks from API
@@ -80,7 +83,6 @@ export function useTasks()
         }
         catch (e)
         {
-            console.error(e)
             toastMessage.value = 'Error loading tasks'
             showToast.value = true
         }
@@ -95,7 +97,6 @@ export function useTasks()
         }
         catch (e)
         {
-            console.error(e)
             toastMessage.value = 'Error loading tags'
             showToast.value = true
         }
@@ -113,7 +114,6 @@ export function useTasks()
         }
         catch (err)
         {
-            console.error(err)
             toastMessage.value = 'Error creating task'
             showToast.value = true
         }
@@ -147,7 +147,6 @@ export function useTasks()
         }
         catch (err)
         {
-            console.error(err)
             toastMessage.value = 'Error updating task'
             showToast.value = true
         }
@@ -174,7 +173,6 @@ export function useTasks()
         }
         catch (err)
         {
-            console.error(err)
             toastMessage.value = 'Error deleting task'
             showToast.value = true
         }
@@ -198,7 +196,6 @@ export function useTasks()
       }
       catch (err)
       {
-        console.error(err)
         toastMessage.value = 'Error creating tag'
         showToast.value = true
       }
@@ -225,7 +222,6 @@ export function useTasks()
       }
       catch (err)
       {
-        console.error(err)
         toastMessage.value = 'Error updating tag'
         showToast.value = true
       }
@@ -256,12 +252,12 @@ export function useTasks()
         }
         catch (err)
         {
-            console.error(err)
             toastMessage.value = 'Error deleting tag'
             showToast.value = true
         }
     }
 
+    // Toggle task done
     const toggleDone = async (id: number) =>
     {
         try
@@ -271,7 +267,6 @@ export function useTasks()
         }
         catch (err)
         {
-            console.error(err)
             toastMessage.value = 'Error marking task as done'
             showToast.value = true
         }
@@ -282,6 +277,10 @@ export function useTasks()
         refreshTasks()
         refreshTags()
     })
+
+    // -----------------
+    // Outputs
+    // -----------------
 
     return {
         tasks,

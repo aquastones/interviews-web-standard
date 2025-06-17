@@ -91,7 +91,7 @@ function onSubmit()
   })
 }
 
-// Cancel
+// Cancel function
 function emitCancel()
 {
   emit('cancel')

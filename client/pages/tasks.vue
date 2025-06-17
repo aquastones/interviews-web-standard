@@ -2,7 +2,10 @@
 import { onMounted } from 'vue'
 import { useTasks } from '~/composables/useTasks'
 
+// --------------------
 // Import components
+// --------------------
+
 import Toast from '~/components/Toast.vue'
 import TaskForm from '~/components/TaskForm.vue'
 import TagForm from '~/components/TagForm.vue'
@@ -12,6 +15,9 @@ import TagsSidebar from '~/components/TagsSidebar.vue'
 import Header from '~/components/Header.vue'
 import EmptyState from '~/components/EmptyState.vue'
 
+// ------------------------------
+// Recieve data from components
+// ------------------------------
 const {
   tags,
   filteredTasks,
